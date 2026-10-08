@@ -1,0 +1,19 @@
+[package]
+name = "rustweiqi"
+version = "1.0.0"
+edition = "2021"
+description = "weiqi_lab Rust 参考移植（零第三方依赖）"
+license = "MIT"
+
+[[bin]]
+name = "rustweiqi"
+path = "src/main.rs"
+
+# 零依赖：不得引入 serde / rand 等 crate
+[dependencies]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
