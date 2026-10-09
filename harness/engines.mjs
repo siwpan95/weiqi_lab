@@ -41,6 +41,12 @@ export const ENGINES = [
     cwd: path.join(ROOT, "CsWeiqi"),
     playouts: 8000,
   },
+  {
+    key: "go", name: "GoWeiqi", lang: "go",
+    cmd: path.join(ROOT, "GoWeiqi", "goweiqi.exe"), args: ["driver"],
+    cwd: path.join(ROOT, "GoWeiqi"),
+    playouts: 8000,
+  },
 ];
 
 /** 只保留可执行文件存在 / 命令可在 PATH 上的引擎（探针制，不出假结果） */

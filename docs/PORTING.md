@@ -1,8 +1,11 @@
-# 移植简报（PORTING.md）—— 五语言功能对等实现要求
+# 移植简报（PORTING.md）—— 多语言功能对等实现要求
 
 > 面向各语言移植者（人或代理）。**规则行为的唯一真相来源**：
 > `docs/RULES_SPEC.md`（规则）+ `docs/PROTOCOL_SPEC.md`（协议）+ `spec/golden.json`（黄金值）。
 > **参考实现**：`PyWeiqi/`（已全绿：golden 35/35 + unit 58/58）。
+>
+> **已完成的语言**（6/6）：`PyWeiqi` `JsWeiqi` `RustWeiqi` `CppWeiqi` `CsWeiqi` `GoWeiqi`
+> —— 全部通过 golden 35/35 与跨引擎协议差分（0 差异）。新增语言请以下表为准补齐。
 
 ## 1. 每个语言目录的交付物
 
@@ -63,6 +66,7 @@ printf '{"id":1,"cmd":"hello"}\n{"id":2,"cmd":"quit"}\n' | <driver 启动命令>
 | **Rust** | `u64` 溢出用 `wrapping_mul` / `wrapping_add`；`cargo build --release`；建议 `Vec<u8>` 棋盘。 |
 | **C++** | `uint64_t`；`g++ -O2 -static`；C++17；注意 `>>` 为无符号右移（用 `uint64_t`）。 |
 | **C#** | `ulong`；`unchecked` 块内做乘法/加法；`dotnet build -c Release`（net10.0）；注意 `>>` 对 `ulong` 是逻辑右移。 |
+| **Go** | `uint64` 溢出天然回绕（无需显式 wrapping）；`math/bits` 可用；`encoding/json` 属标准库可用。**本机系统 Go 的 GOROOT 残缺**，`build.sh` 内需显式设 `GOROOT` 指向受管安装（见 REQUIREMENTS.md §2）。 |
 
 ## 7. 提交要求
 

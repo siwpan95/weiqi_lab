@@ -93,7 +93,19 @@
 
 > 上述项目**均未复制代码**；仅作"存在先例"的证据与差异对照，避免闭门造车。
 
-## 6. 未决/裁剪项（诚实记录）
+## 6. 借鉴记账（第二轮，2026-10-09）
+
+| 来源 | 许可证 | 借用范围 | 落点 |
+|---|---|---|---|
+| **`G:\repos\zhuangtaiji`**（多范式决策引擎，公开仓 https://gitee.com/siwpan/zhuangtaiji ，作者同为 siwpan） | MIT | **DTMC 的接口形态与幂迭代求稳态思路**（`core/markov_chain.py`：states/matrix/step/simulate/steady_state/is_absorbing） | `tools/markov.mjs` §1 为 JS 重写；§2/§3（落子转移模型、棋形条件模型 + 退避）为本项目新增，来源中**没有**对应实现 |
+| GTP v2 规范（Farnebäck） | 规范文本（公开） | 命令语义、输出格式（`= ` / `? `）、**§4.1.1 让子星位表**、坐标跳 I | `tools/gtp.mjs`（适配器）、`tools/tests_io.mjs`（坐标表快照断言） |
+| SGF FF[4] 规范（red-bean.com） | 规范文本（公开） | 属性语义、坐标编码（y 向下 vs 引擎 y 向上→需翻转）、pass 写法（`B[]` 与遗留 `B[tt]`） | `tools/sgf.mjs` |
+| CGTC（Müller） | — | `.tst` 用例格式与 `reg_genmove` 判据 | `spec/regress/*.tst` + `tools/regress.mjs` |
+
+> 说明：`zhuangtaiji` 为同一作者的既有项目，许可证一致（MIT），无许可冲突；
+> 本次仅借用**结构与算法思路**，未复制其 Python 代码；`tools/markov.mjs` 中的围棋专用层为本项目原创。
+
+## 7. 未决/裁剪项（诚实记录）
 
 1. **SGF 读写**：M1 不实现（局面用 `golden.json` 承载）；未来经 `loadsgf/printsgf` 补齐后可接 CGTC。
 2. **GTP 适配器**：未实现；协议语义已对齐，属机械映射工作。
