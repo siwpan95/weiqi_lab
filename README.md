@@ -107,8 +107,12 @@
 逐项实测与 A/B 见 `docs/ENGINE_STRENGTH.md`。其中**唯一经 300 局 A/B 证实显著**的是渐进加宽：
 
 ```json
-{ "probe_k": 3, "pw_c": 0.5, "pw_min": 6 }   // 19 路提速约 70×，搜索质量 300 局 59.3%（p<0.0001）
+{ "probe_k": 3, "pw_c": 0.5, "pw_min": 6 }
 ```
+
+对**原始默认**的自对弈 A/B（9 路 · 150 playouts · **300 局**）：**胜率 72.3% vs 27.7%（p<0.0001）**，
+且**每手快 3.2×**（93 ms → 29 ms）；其邻域参数（`pw_c=1.0`、`pw_min=4`）经扫描**显著更差**，
+说明该配置位于平台中部。19 路 genmove 另因 `probe_k=3` 提速约 70×（5940 ms → 81 ms）。
 
 其余开关（LGR / lib2 / pbias / cnn_prior / tree_reuse）经实测为**中性或负向**，与其移植状态一并见
 `docs/PORTING.md` §4.1 与 `docs/ENGINE_STRENGTH.md` §7 的战果总表。
