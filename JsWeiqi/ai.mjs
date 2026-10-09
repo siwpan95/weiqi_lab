@@ -51,6 +51,17 @@ export class PBoard {
     this.stamp = new Int32Array(this.n2);
     this.libstamp = new Int32Array(this.n2);
     this._gen = 0;
+    // ---- 零分配 scratch（热路径复用；19 路实测 probe/playout 达 3.6 万次，避免每次分配小数组）----
+    this._scanStack = new Int32Array(this.n2);    // 棋块扫描的遍历栈
+    this._scanMembers = new Int32Array(this.n2);  // 棋块成员（前 _sMLen 项有效）
+    this._saveIdx = new Int32Array(this.n2 + 2);  // simulate 的回滚记录（点）
+    this._saveVal = new Uint8Array(this.n2 + 2);  // simulate 的回滚记录（原值）
+    this._capBuf = new Int32Array(this.n2);       // 本手提子点
+    this._seenStamp = new Int32Array(this.n2);    // 棋块去重（代际标记，替代 Set）
+    this._seenGen = 0;
+    this._sNlibs = 0;
+    this._sLib0 = -1;
+    this._sMLen = 0;
   }
 
   clone() {
@@ -60,7 +71,8 @@ export class PBoard {
     return p;
   }
 
-  // 棋块扫描 → [members|None, n_libs, lib0]。want_members=False 时不建成员表（省分配）。
+  // 棋块扫描（**零分配**）：结果写入 this._sNlibs / this._sLib0 / this._scanMembers[0, _sMLen)。
+  // ⚠️ _scanMembers 是共享缓冲：调用方必须在**下一次 _scan 之前**消费完成员（本文件内均如此）。
   _scan(idx, want_members) {
     const cells = this.cells;
     const stamp = this.stamp;
@@ -69,15 +81,19 @@ export class PBoard {
     this._gen = gen;
     const color = cells[idx];
     const neigh = this.neigh;
-    const stack = [idx];
+    const stack = this._scanStack;
+    const members = this._scanMembers;
+    let sp = 0;
+    let mlen = 0;
+    stack[sp++] = idx;
     stamp[idx] = gen;
-    const members = want_members ? [idx] : null;
+    if (want_members) members[mlen++] = idx;
     let nlibs = 0;
     let lib0 = -1;
-    while (stack.length) {
-      const cur = stack.pop();
+    while (sp > 0) {
+      const cur = stack[--sp];
       const nbs = neigh[cur];
-      for (let i = 0; i < nbs.length; i++) {
+      for (let i = 0, L = nbs.length; i < L; i++) {
         const nb = nbs[i];
         const v = cells[nb];
         if (v === 0) {
@@ -88,15 +104,18 @@ export class PBoard {
           }
         } else if (v === color && stamp[nb] !== gen) {
           stamp[nb] = gen;
-          stack.push(nb);
-          if (want_members) members.push(nb);
+          stack[sp++] = nb;
+          if (want_members) members[mlen++] = nb;
         }
       }
     }
-    return [members, nlibs, lib0];
+    this._sNlibs = nlibs;
+    this._sLib0 = lib0;
+    this._sMLen = mlen;
   }
 
   // 核心推演。→ [ok, captures, own_size, own_libs, ko_new]；mutate=True 保留变化。
+  // **零分配**：所有临时状态走实例 scratch（见构造函数注释）。
   simulate(color, p, mutate) {
     const cells = this.cells;
     if (p < 0 || p >= this.n2 || cells[p] !== 0 || p === this.ko) {
@@ -104,37 +123,55 @@ export class PBoard {
     }
     const opp = 3 - color;
     const neigh = this.neigh;
-    const save = [[p, 0]];
+    const saveIdx = this._saveIdx;
+    const saveVal = this._saveVal;
+    const capBuf = this._capBuf;
+    const seenStamp = this._seenStamp;
+    const sgen = this._seenGen + 1;
+    this._seenGen = sgen;
+    let slen = 0;
+    let clen = 0;
+    saveIdx[slen] = p;
+    saveVal[slen] = 0;
+    slen += 1;
     cells[p] = color;
-    const captured = [];
-    const seen = new Set();
     // 6) 提对方（提子预检：仅当邻块除落点外无空邻点才整块扫描）
-    for (const nb of neigh[p]) {
-      if (cells[nb] === opp && !seen.has(nb)) {
-        let other_empty = false;
-        for (const q of neigh[nb]) {
-          if (q !== p && cells[q] === 0) {
-            other_empty = true;
-            break;
-          }
+    const nbsP = neigh[p];
+    for (let ni = 0, NL = nbsP.length; ni < NL; ni++) {
+      const nb = nbsP[ni];
+      if (cells[nb] !== opp || seenStamp[nb] === sgen) continue;
+      let other_empty = false;
+      const nbs2 = neigh[nb];
+      for (let qi = 0, QL = nbs2.length; qi < QL; qi++) {
+        const q = nbs2[qi];
+        if (q !== p && cells[q] === 0) {
+          other_empty = true;
+          break;
         }
-        if (other_empty) {
-          seen.add(nb);
-          continue;
-        }
-        const [members, nlibs] = this._scan(nb, true);
-        for (const m of members) seen.add(m);
-        if (nlibs === 0) for (const m of members) captured.push(m);
+      }
+      if (other_empty) {
+        seenStamp[nb] = sgen;
+        continue;
+      }
+      this._scan(nb, true);
+      const mlen = this._sMLen;
+      const members = this._scanMembers;
+      for (let i = 0; i < mlen; i++) seenStamp[members[i]] = sgen;
+      if (this._sNlibs === 0) {
+        for (let i = 0; i < mlen; i++) capBuf[clen++] = members[i];
       }
     }
-    for (const m of captured) {
-      save.push([m, opp]);
+    for (let i = 0; i < clen; i++) {
+      const m = capBuf[i];
+      saveIdx[slen] = m;
+      saveVal[slen] = opp;
+      slen += 1;
       cells[m] = 0;
     }
     let empties = 0;
     let same_color_nb = false;
-    for (const q of neigh[p]) {
-      const v = cells[q];
+    for (let i = 0, L = nbsP.length; i < L; i++) {
+      const v = cells[nbsP[i]];
       if (v === 0) empties += 1;
       else if (v === color) same_color_nb = true;
     }
@@ -147,39 +184,38 @@ export class PBoard {
       nlibs = empties;
       ko_new = -1;
     } else {
-      const [, nl2] = this._scan(p, false);
-      nlibs = nl2;
+      this._scan(p, false);
+      nlibs = this._sNlibs;
       own_size = same_color_nb ? 2 : 1;
       ko_new = -1;
       if (nlibs === 0) {
         if (!this.suicide_allow) {
-          for (let i = save.length - 1; i >= 0; i--) {
-            const [idx, old] = save[i];
-            cells[idx] = old;
-          }
+          for (let i = slen - 1; i >= 0; i--) cells[saveIdx[i]] = saveVal[i];
           return [false, 0, 0, 0, -1];
         }
-        const [mem3] = this._scan(p, true);
-        for (const m of mem3) {
-          save.push([m, color]);
+        this._scan(p, true);
+        const mlen = this._sMLen;
+        const members = this._scanMembers;
+        for (let i = 0; i < mlen; i++) {
+          const m = members[i];
+          saveIdx[slen] = m;
+          saveVal[slen] = color;
+          slen += 1;
           cells[m] = 0;
         }
-      } else if (captured.length === 1 && !same_color_nb && nlibs === 1) {
-        ko_new = captured[0];
+      } else if (clen === 1 && !same_color_nb && nlibs === 1) {
+        ko_new = capBuf[0];
       }
     }
     if (!mutate) {
-      for (let i = save.length - 1; i >= 0; i--) {
-        const [idx, old] = save[i];
-        cells[idx] = old;
-      }
-      return [true, captured.length, own_size, nlibs, ko_new];
+      for (let i = slen - 1; i >= 0; i--) cells[saveIdx[i]] = saveVal[i];
+      return [true, clen, own_size, nlibs, ko_new];
     }
     this.ko = ko_new;
     this.last = p;
     this.passes = 0;
     this.side = opp;
-    return [true, captured.length, own_size, nlibs, ko_new];
+    return [true, clen, own_size, nlibs, ko_new];
   }
 
   probe(color, p) {
@@ -204,52 +240,65 @@ export class PBoard {
     return true;
   }
 
-  // p 的邻点中是否存在 color 方、仅剩 1 气的棋块（含空邻点预检）。
+  // p 的邻点中是否存在 color 方、仅剩 1 气的棋块（含空邻点预检）。零分配（代际标记替代 Set）。
   adjacent_atari(p, color) {
     const cells = this.cells;
     const neigh = this.neigh;
-    const seen = new Set();
-    for (const nb of neigh[p]) {
-      if (cells[nb] === color && !seen.has(nb)) {
-        let empties = 0;
-        for (const q of neigh[nb]) {
-          if (cells[q] === 0) {
-            empties += 1;
-            if (empties >= 2) break;
-          }
+    const seenStamp = this._seenStamp;
+    const sgen = this._seenGen + 1;
+    this._seenGen = sgen;
+    const nbsP = neigh[p];
+    for (let ni = 0, NL = nbsP.length; ni < NL; ni++) {
+      const nb = nbsP[ni];
+      if (cells[nb] !== color || seenStamp[nb] === sgen) continue;
+      let empties = 0;
+      const nbs2 = neigh[nb];
+      for (let qi = 0, QL = nbs2.length; qi < QL; qi++) {
+        if (cells[nbs2[qi]] === 0) {
+          empties += 1;
+          if (empties >= 2) break;
         }
-        if (empties >= 2) continue;
-        const [members, nlibs] = this._scan(nb, true);
-        for (const m of members) seen.add(m);
-        if (nlibs === 1) return true;
       }
+      if (empties >= 2) continue;
+      this._scan(nb, true);
+      const mlen = this._sMLen;
+      const members = this._scanMembers;
+      for (let i = 0; i < mlen; i++) seenStamp[members[i]] = sgen;
+      if (this._sNlibs === 1) return true;
     }
     return false;
   }
 
-  // 最后一手附近的己方被打吃棋块的救手（其唯一气）。
+  // 最后一手附近的己方被打吃棋块的救手（其唯一气）。零分配（除返回的 out 数组）。
   rescue_moves(color) {
     const out = [];
     const last = this.last;
     if (last < 0) return out;
     const cells = this.cells;
     const neigh = this.neigh;
-    const seen = new Set();
-    const pts = [last, ...neigh[last]];
-    for (const nb of pts) {
-      if (cells[nb] === color && !seen.has(nb)) {
-        let empties = 0;
-        for (const q of neigh[nb]) {
-          if (cells[q] === 0) {
-            empties += 1;
-            if (empties >= 2) break;
-          }
+    const seenStamp = this._seenStamp;
+    const sgen = this._seenGen + 1;
+    this._seenGen = sgen;
+    const nbsL = neigh[last];
+    for (let li = -1, LL = nbsL.length; li < LL; li++) {
+      const nb = li < 0 ? last : nbsL[li];
+      if (cells[nb] !== color || seenStamp[nb] === sgen) continue;
+      let empties = 0;
+      const nbs2 = neigh[nb];
+      for (let qi = 0, QL = nbs2.length; qi < QL; qi++) {
+        if (cells[nbs2[qi]] === 0) {
+          empties += 1;
+          if (empties >= 2) break;
         }
-        if (empties >= 2) continue;
-        const [members, nlibs, lib0] = this._scan(nb, true);
-        for (const m of members) seen.add(m);
-        if (nlibs === 1 && lib0 >= 0) out.push(lib0);
       }
+      if (empties >= 2) continue;
+      this._scan(nb, true);
+      const mlen = this._sMLen;
+      const nlibs = this._sNlibs;
+      const lib0 = this._sLib0;
+      const members = this._scanMembers;
+      for (let i = 0; i < mlen; i++) seenStamp[members[i]] = sgen;
+      if (nlibs === 1 && lib0 >= 0) out.push(lib0);
     }
     return out;
   }
@@ -316,6 +365,8 @@ export const DEFAULT_PROFILE = {
   cnn_prior: 0.0,           // PUCT 先验项权重；0 = 关闭
   cnn_prior_max_nodes: 1,   // 每次 genmove 最多做几次 CNN 前向（1 = 仅根节点）
   cnn_prior_weights: null,  // 权重文件路径覆盖；null = spec/cnn_weights-<size>.json
+  // ---- 惰性探测（可选；默认 0 = 探测全部候选，与原行为逐位一致）----
+  probe_k: 0,               // >0：playout 每手最多探测 k 个普通候选（提子点必探，不受限）
 };
 
 // ---------------------------------------------------------------- CNN 先验
@@ -486,11 +537,124 @@ function candidates(pb, color, radius) {
   return out;
 }
 
+// ---------------------------------------------------------------- 惰性探测（probe_k > 0）
+// p 落子是否**可能**提掉对方子。
+// 判据（保守必要条件，**不漏真提子**、可能多报——多报的代价只是多一次 probe）：
+//   p 的某个对方邻子 q 的"空邻点集"恰为 {p}。
+// 证明：若 p 提 q 所在块，则块的气集 = {p}；而 q 的空邻 ⊆ 块的气集，故 q 的空邻 = {p}。∎
+function _mayCapture(pb, p, color) {
+  const cells = pb.cells;
+  const neigh = pb.neigh;
+  const opp = 3 - color;
+  const nbs = neigh[p];
+  for (let i = 0, L = nbs.length; i < L; i++) {
+    const q = nbs[i];
+    if (cells[q] !== opp) continue;
+    const qn = neigh[q];
+    let nEmpty = 0;
+    let onlyP = true;
+    for (let j = 0, QL = qn.length; j < QL; j++) {
+      const r = qn[j];
+      if (cells[r] === 0) {
+        nEmpty += 1;
+        if (r !== p) {
+          onlyP = false;
+          break;
+        }
+      }
+    }
+    if (nEmpty === 1 && onlyP) return true;
+  }
+  return false;
+}
+
+// 惰性候选收集：圈序 {last+正交邻} → 方形2 → 方形4 → 全盘；
+// 每圈内先做提子预判（O(16)/点，不 probe）→ 疑似点 probe 确认；再按随机顺序探测普通候选，
+// 最多 probeK 个（probeK=0 的语义由调用方保证不走本函数）。
+function collectLazy(pb, rng, color, probeK, cands, urgent) {
+  const size = pb.size;
+  const cells = pb.cells;
+  const neigh = pb.neigh;
+  const last = pb.last;
+  const n2 = pb.n2;
+  let probed = 0;
+  const nRings = last >= 0 ? 4 : 1;
+  for (let ring = 0; ring < nRings; ring++) {
+    const pool = [];
+    let prevR = -1;
+    let R = 0;
+    if (last < 0) {
+      for (let p = 0; p < n2; p++) if (cells[p] === 0) pool.push(p);
+    } else if (ring === 0) {
+      if (cells[last] === 0) pool.push(last);
+      const nb = neigh[last];
+      for (let i = 0, L = nb.length; i < L; i++) if (cells[nb[i]] === 0) pool.push(nb[i]);
+    } else {
+      R = ring === 1 ? 2 : ring === 2 ? 4 : 0; // 0 = 全盘
+      prevR = ring === 1 ? 1 : ring === 2 ? 2 : 4;
+      const lx = last % size;
+      const ly = (last - lx) / size;
+      if (R === 0) {
+        for (let p = 0; p < n2; p++) {
+          if (cells[p] !== 0) continue;
+          const dx = Math.abs((p % size) - lx);
+          const dy = Math.abs(Math.floor(p / size) - ly);
+          if ((dx > dy ? dx : dy) <= prevR) continue;
+          pool.push(p);
+        }
+      } else {
+        for (let dy = -R; dy <= R; dy++) {
+          const y = ly + dy;
+          if (y < 0 || y >= size) continue;
+          for (let dx = -R; dx <= R; dx++) {
+            const x = lx + dx;
+            if (x < 0 || x >= size) continue;
+            const adx = dx < 0 ? -dx : dx;
+            const ady = dy < 0 ? -dy : dy;
+            if ((adx > ady ? adx : ady) <= prevR) continue;
+            const p = y * size + x;
+            if (cells[p] === 0) pool.push(p);
+          }
+        }
+      }
+    }
+    if (!pool.length) continue;
+    rng_shuffle(pool, rng);
+    // 轮 1：提子（预判 → 确认）
+    for (let i = 0, L = pool.length; i < L; i++) {
+      const p = pool[i];
+      if (!_mayCapture(pb, p, color)) continue;
+      const r = pb.probe(color, p);
+      probed += 1;
+      if (!r[0]) continue;
+      if (r[1] > 0) urgent.push(p);
+      else if (r[3] > 1 && !(pb.is_eye(p, color) && !pb.adjacent_atari(p, 3 - color))) cands.push(p);
+    }
+    // 轮 2：普通候选（随机顺序，最多 probeK 个）
+    for (let i = 0, L = pool.length; i < L && probed < probeK; i++) {
+      const p = pool[i];
+      if (urgent.indexOf(p) >= 0 || cands.indexOf(p) >= 0) continue;
+      const r = pb.probe(color, p);
+      probed += 1;
+      if (!r[0]) continue;
+      if (r[1] > 0) {
+        urgent.push(p);
+        continue;
+      }
+      if (r[3] === 1) continue;
+      if (pb.is_eye(p, color) && !pb.adjacent_atari(p, 3 - color)) continue;
+      cands.push(p);
+    }
+    if (cands.length > 0 || urgent.length > 0) return;
+  }
+}
+
 // 轻量 playout：提子/救子优先 → 贴近最后一手 → 随机；避免自填气与填眼。
 function playout(pb, rng, pr, max_moves) {
   const cap_bias = pr["capture_bias"];
   const pat_bias = pr["pattern_bias"];
   const large_margin = pr["mercy"] * pb.n2;
+  const probeK = Math.trunc(Number(pr["probe_k"]) || 0);
   let moves = 0;
   while (pb.passes < 2 && moves < max_moves) {
     const color = pb.side;
@@ -498,35 +662,16 @@ function playout(pb, rng, pr, max_moves) {
     // 不镜像过手（Fuego 范式）——仅在无着可走时 pass。
     const cands = [];
     const urgent = [];
-    const probe_pts = last >= 0 ? [last, ...pb.neigh[last]] : null;
     const cells = pb.cells;
-    if (probe_pts !== null) {
-      for (const p of probe_pts) {
-        if (cells[p] !== 0) continue;
-        const [ok, cap, , olibs] = pb.probe(color, p);
-        if (!ok) continue;
-        if (cap === 0) {
-          if (olibs === 1) continue;
-          if (pb.is_eye(p, color) && !pb.adjacent_atari(p, 3 - color)) continue;
-        }
-        cands.push(p);
-        if (cap > 0) urgent.push(p);
-      }
-    }
-    if (cands.length === 0) {
-      // 逐圈扩大（关键性能优化，19 路实测：全盘扫描会使 probe 次数 ×35）：
-      // 半径 1 已在上方尝试过 → 依次试 2 / 4 / 全盘；每圈仅对盘内点调用 probe。
-      const rings = last >= 0 ? [2, 4, 0] : [0]; // 0 = 全盘
-      for (const R of rings) {
-        for (let p = 0; p < pb.n2; p++) {
+    if (probeK > 0) {
+      // ---- 惰性路径（probe_k > 0）：提子优先 + 随机顺序早停 ----
+      collectLazy(pb, rng, color, probeK, cands, urgent);
+    } else {
+      // ---- 原路径（默认）：探测全部局部候选，行为与历史版本逐位一致 ----
+      const probe_pts = last >= 0 ? [last, ...pb.neigh[last]] : null;
+      if (probe_pts !== null) {
+        for (const p of probe_pts) {
           if (cells[p] !== 0) continue;
-          if (R > 0) {
-            const dx = Math.abs((p % pb.size) - (last % pb.size));
-            if (dx > R) continue;
-            const dy = Math.abs(Math.floor(p / pb.size) - Math.floor(last / pb.size));
-            if (dy > R) continue;
-            if (dx <= 1 && dy <= 1) continue; // 半径 1 已试过
-          }
           const [ok, cap, , olibs] = pb.probe(color, p);
           if (!ok) continue;
           if (cap === 0) {
@@ -536,7 +681,32 @@ function playout(pb, rng, pr, max_moves) {
           cands.push(p);
           if (cap > 0) urgent.push(p);
         }
-        if (cands.length > 0) break;
+      }
+      if (cands.length === 0) {
+        // 逐圈扩大（关键性能优化，19 路实测：全盘扫描会使 probe 次数 ×35）：
+        // 半径 1 已在上方尝试过 → 依次试 2 / 4 / 全盘；每圈仅对盘内点调用 probe。
+        const rings = last >= 0 ? [2, 4, 0] : [0]; // 0 = 全盘
+        for (const R of rings) {
+          for (let p = 0; p < pb.n2; p++) {
+            if (cells[p] !== 0) continue;
+            if (R > 0) {
+              const dx = Math.abs((p % pb.size) - (last % pb.size));
+              if (dx > R) continue;
+              const dy = Math.abs(Math.floor(p / pb.size) - Math.floor(last / pb.size));
+              if (dy > R) continue;
+              if (dx <= 1 && dy <= 1) continue; // 半径 1 已试过
+            }
+            const [ok, cap, , olibs] = pb.probe(color, p);
+            if (!ok) continue;
+            if (cap === 0) {
+              if (olibs === 1) continue;
+              if (pb.is_eye(p, color) && !pb.adjacent_atari(p, 3 - color)) continue;
+            }
+            cands.push(p);
+            if (cap > 0) urgent.push(p);
+          }
+          if (cands.length > 0) break;
+        }
       }
     }
     for (const m of pb.rescue_moves(color)) {

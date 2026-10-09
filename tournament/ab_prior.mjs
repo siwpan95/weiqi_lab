@@ -26,10 +26,19 @@ const ENGINE_KEY = arg("engine", "js");
 const SIZE = Number(arg("size", 9));
 const PLAYOUTS = Number(arg("playouts", 150));
 const GAMES = Number(arg("games", 90));
-const PRIOR_A = Number(arg("priorA", 0));
-const PRIOR_B = Number(arg("priorB", 3));
 const SEED_BASE = Number(arg("seed", 20261009));
-const TAG = arg("tag", `prior-${PRIOR_A}vs${PRIOR_B}`);
+
+// 通用 profile 支持：--profA/--profB 传 JSON；亦兼容旧的 --priorA/--priorB（布尔权重）
+function parseProf(jsonArg, priorArg) {
+  if (jsonArg) return JSON.parse(jsonArg);
+  const w = Number(priorArg ?? 0);
+  return w > 0 ? { cnn_prior: w } : {};
+}
+const PROF_A = parseProf(arg("profA", null), arg("priorA", 0));
+const PROF_B = parseProf(arg("profB", null), arg("priorB", 0));
+const LABEL_A = arg("labelA", JSON.stringify(PROF_A) === "{}" ? "默认(全关)" : JSON.stringify(PROF_A));
+const LABEL_B = arg("labelB", JSON.stringify(PROF_B) === "{}" ? "默认(全关)" : JSON.stringify(PROF_B));
+const TAG = arg("tag", `ab-${Date.now().toString(36)}`);
 
 function normalCdf(z) {
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
@@ -45,9 +54,7 @@ function twoProportionP(x1, n1, x2, n2) {
   return 2 * (1 - normalCdf(Math.abs(x1 / n1 - x2 / n2) / se));
 }
 
-function profileOf(weight) {
-  return weight > 0 ? { cnn_prior: weight } : {};
-}
+// 两臂 profile 已在文件头解析（PROF_A / PROF_B）
 
 async function main() {
   const spec = availableEngines().find((e) => e.key === ENGINE_KEY);
@@ -58,7 +65,7 @@ async function main() {
   const t0 = Date.now();
   console.log(`== CNN 先验自对弈 A/B ==`);
   console.log(`引擎 ${spec.name}（${spec.key}）· ${SIZE} 路 · ${PLAYOUTS} playouts/手 · ${GAMES} 局`);
-  console.log(`A = cnn_prior ${PRIOR_A}（关闭）   B = cnn_prior ${PRIOR_B}（开启）`);
+  console.log(`A = ${LABEL_A}\n   B = ${LABEL_B}`);
 
   const client = new EngineClient(spec, { genmoveTimeoutMs: 600000 });
   await client.start();
@@ -81,7 +88,7 @@ async function main() {
       while (!ref.over && plies < cap) {
         const side = ref.side; // 1=B / 2=W
         const isA = (side === 1) === aIsBlack;
-        const w = isA ? PRIOR_A : PRIOR_B;
+        const prof = isA ? PROF_A : PROF_B;
         const tStart = Date.now();
         let res;
         try {
@@ -89,7 +96,7 @@ async function main() {
             color: side === 1 ? "B" : "W",
             playouts: PLAYOUTS,
             seed: SEED_BASE + g * 7919 + plies * 131,
-            profile: profileOf(w),
+            profile: prof,
           });
         } catch (e) {
           anomaly = `引擎错误: ${e.message}`;
@@ -144,13 +151,13 @@ async function main() {
   const anomalies = games.filter((x) => x.anomaly).length;
 
   const L = [];
-  L.push(`# CNN 先验自对弈 A/B — ${new Date().toISOString().slice(0, 10)}`);
+  L.push(`# 引擎 Profile 自对弈 A/B — ${new Date().toISOString().slice(0, 10)}`);
   L.push("");
   L.push(`- 引擎：**${spec.name}**（自对弈）· ${SIZE} 路 · ${PLAYOUTS} playouts/手 · ${GAMES} 局（黑白对调）`);
-  L.push(`- A = \`cnn_prior=${PRIOR_A}\`（关闭，基线）   B = \`cnn_prior=${PRIOR_B}\`（开启）`);
-  L.push(`- 权重文件：\`spec/cnn_weights-${SIZE}.json\`（教师：\`ml/cnn-${SIZE}.npz\`，训练于弱引擎自对弈语料）`);
+  L.push(`- A = \`${LABEL_A}\`   B = \`${LABEL_B}\``);
+  L.push(`- 引擎版本：\`${process.env.GIT_HEAD || "working-tree"}\``);
   L.push("");
-  L.push(`| 指标 | A（先验关闭） | B（先验开启） |`);
+  L.push(`| 指标 | A | B |`);
   L.push(`|---|---|---|`);
   L.push(`| 胜 | ${wA} | ${wB} |`);
   L.push(`| 负 | ${wB} | ${wA} |`);
@@ -173,13 +180,13 @@ async function main() {
   const dir = path.join(HERE, "reports");
   fs.mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().slice(0, 10);
-  fs.writeFileSync(path.join(dir, `ab-prior-${stamp}-${TAG}.md`), out, "utf8");
-  fs.writeFileSync(path.join(dir, `ab-prior-${stamp}-${TAG}.json`),
-    JSON.stringify({ settings: { engine: ENGINE_KEY, size: SIZE, playouts: PLAYOUTS, games: GAMES, priorA: PRIOR_A, priorB: PRIOR_B, tag: TAG },
+  fs.writeFileSync(path.join(dir, `ab-profile-${stamp}-${TAG}.md`), out, "utf8");
+  fs.writeFileSync(path.join(dir, `ab-profile-${stamp}-${TAG}.json`),
+    JSON.stringify({ settings: { engine: ENGINE_KEY, size: SIZE, playouts: PLAYOUTS, games: GAMES, profA: PROF_A, profB: PROF_B, labelA: LABEL_A, labelB: LABEL_B, tag: TAG },
       wA, wB, draws, anomalies, avgMoves, msA, msB, p, games }, null, 1) + "\n", "utf8");
   console.log(`\nA胜 ${wA} · B胜 ${wB} · 和 ${draws} · 异常 ${anomalies} · p=${p.toFixed(4)}`);
   console.log(`平均每手：A ${msA.toFixed(0)}ms · B ${msB.toFixed(0)}ms`);
-  console.log(`→ reports/ab-prior-${stamp}-${TAG}.md`);
+  console.log(`→ reports/ab-profile-${stamp}-${TAG}.md`);
 }
 
 main().catch((e) => {
