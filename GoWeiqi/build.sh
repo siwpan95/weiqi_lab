@@ -9,12 +9,23 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-MANAGED_ROOT="C:/Users/psw/.workbuddy/binaries/go/versions/1.27.1/go"
+# --- 工具链解析（PATH 优先，回退本机安装路径）---------------------------------
+# 旧 MANAGED_ROOT 指向另一台机器（用户 psw）的受管安装；本机实际情况：
+#   - Go 安装在 D:\Go\go（go1.22.5，全局 GOROOT 环境变量为空，无冲突）
+#   - 受管安装位于 C:\Users\13122\.workbuddy\binaries\go\versions\1.27.1\go
+# 仍可用环境变量覆盖：WEIQI_GO 指定 go 可执行文件，WEIQI_GOROOT 指定 GOROOT。
+MANAGED_ROOT="C:/Users/13122/.workbuddy/binaries/go/versions/1.27.1/go"
+LOCAL_ROOT="D:/Go/go"
 GO_BIN="${WEIQI_GO:-}"
 GOROOT_VAL="${WEIQI_GOROOT:-}"
 
 if [ -z "$GO_BIN" ]; then
-  if [ -x "$MANAGED_ROOT/bin/go.exe" ]; then
+  if command -v go >/dev/null 2>&1; then
+    GO_BIN="go"
+  elif [ -x "$LOCAL_ROOT/bin/go.exe" ]; then
+    GO_BIN="$LOCAL_ROOT/bin/go.exe"
+    [ -z "$GOROOT_VAL" ] && GOROOT_VAL="$LOCAL_ROOT"
+  elif [ -x "$MANAGED_ROOT/bin/go.exe" ]; then
     GO_BIN="$MANAGED_ROOT/bin/go.exe"
     [ -z "$GOROOT_VAL" ] && GOROOT_VAL="$MANAGED_ROOT"
   else
