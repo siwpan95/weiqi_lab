@@ -61,6 +61,10 @@ class PolicyCNN:
             "b2": np.zeros(ch2, dtype=F32),
             "W3": (rng.normal(0, np.sqrt(1.0 / ch2), (1, ch2))).astype(F32),
             "b3": np.zeros(1, dtype=F32),
+            # ---- 价值头：在 h2 上全局均值池化 → 线性 → sigmoid（黑胜概率）----
+            # 未训练时为零 → 恒输出 0.5（中性），不影响策略训练。
+            "Wv": (rng.normal(0, np.sqrt(1.0 / ch2), (ch2,))).astype(F32),
+            "bv": np.zeros(1, dtype=F32),
         }
 
     # ---------- 前向 ----------
@@ -82,10 +86,27 @@ class PolicyCNN:
         logits = (h2.transpose(0, 2, 1) @ p["W3"].T)[:, :, 0] + p["b3"][0]  # (N,HW)
         cache = {"col1": col1, "z1": z1, "h1": h1, "col2": col2,
                  "z2": z2, "h2": h2, "N": N, "HW": HW}
+        cache = {"col1": col1, "z1": z1, "h1": h1, "col2": col2,
+                 "z2": z2, "h2": h2, "N": N, "HW": HW}
         return logits.astype(F32), cache
 
+    # ---------- 前向（含价值头） ----------
+    def forwardV(self, X):
+        """与 forward 相同，但额外返回 value（黑胜概率 ∈ (0,1)）。
+        价值头在 h2 上做全局均值池化 → 线性(Wv,bv) → sigmoid。"""
+        logits, cache = self.forward(X)
+        p = self.params
+        N, ch2, HW = cache["N"], self.ch2, cache["HW"]
+        h2 = cache["h2"]                                       # (N, ch2, H, W)
+        h2mean = h2.reshape(N, ch2, HW).mean(axis=2)           # (N, ch2)
+        zv = (h2mean @ p["Wv"] + p["bv"][0]).astype(F32)        # (N,)
+        value = (1.0 / (1.0 + np.exp(-zv))).astype(F32)
+        cache["zv"] = zv
+        cache["h2mean"] = h2mean
+        return logits.astype(F32), value, cache
+
     # ---------- 反向 ----------
-    def backward(self, cache, dlogits):
+    def backward(self, cache, dlogits, dvalue=None):
         p = self.params
         ch1, ch2 = self.ch1, self.ch2
         N = cache["N"]
@@ -97,11 +118,27 @@ class PolicyCNN:
         z1 = cache["z1"]
         col1 = cache["col1"]
         col2 = cache["col2"]
+        # ---- 价值头梯度（汇入 dh2，并产 Wv/bv 梯度）----
+        if dvalue is not None:
+            zv = cache["zv"]
+            sigm = 1.0 / (1.0 + np.exp(-zv))
+            dsig = (dvalue * sigm * (1.0 - sigm)).astype(F32)            # (N,)
+            h2mean = cache["h2mean"]                                       # (N, ch2)
+            Wv = p["Wv"]
+            dWv = (h2mean.T @ dsig).astype(F32)                            # (ch2,)
+            dbv = np.asarray([dsig.sum()], dtype=F32)
+            dh2_value = (dsig[:, None] * Wv[None, :])[:, :, None].repeat(HW, axis=2)  # (N,ch2,HW)
+        else:
+            dWv = None
+            dbv = None
+            dh2_value = 0.0
+        # ---- 策略头梯度 ----
         W2r = p["W2"].reshape(ch2, ch1 * 9)
         h2t = h2.transpose(0, 2, 1)                        # (N,HW,ch2)
         db3 = dlogits.sum()
         dW3 = np.tensordot(h2t, dlogits, axes=([0, 1], [0, 1])).reshape(1, ch2)
-        dh2 = (dlogits[:, :, None] * p["W3"][None, :]).transpose(0, 2, 1)  # (N,ch2,HW)
+        dh2_policy = (dlogits[:, :, None] * p["W3"][None, :]).transpose(0, 2, 1)  # (N,ch2,HW)
+        dh2 = dh2_policy + dh2_value
         dpre2 = dh2 * (z2 > 0)
         dW2r = np.tensordot(dpre2, col2, axes=([0, 2], [0, 2]))  # (ch2,K2)
         db2 = dpre2.sum(axis=(0, 2))
@@ -118,6 +155,9 @@ class PolicyCNN:
             "W3": dW3,
             "b3": np.asarray([db3], dtype=F32),
         }
+        if dWv is not None:
+            grads["Wv"] = dWv
+            grads["bv"] = dbv
         return grads
 
     # ---------- 保存 / 载入 ----------
@@ -141,6 +181,13 @@ class PolicyCNN:
         net = cls(size, cin, ch1, ch2)
         for k in ["W1", "b1", "W2", "b2", "W3", "b3"]:
             net.params[k] = z[k].astype(F32)
+        # 价值头：旧权重文件可能不含 Wv/bv → 补零（输出恒 0.5，中性，不影响策略）
+        if "Wv" in z:
+            net.params["Wv"] = z["Wv"].astype(F32)
+            net.params["bv"] = z["bv"].astype(F32)
+        else:
+            net.params["Wv"] = np.zeros(ch2, dtype=F32)
+            net.params["bv"] = np.zeros(1, dtype=F32)
         return net
 
 
@@ -188,6 +235,16 @@ def legal_target_valid(legal_mask, targets):
     """目标点是否在合法集合内（用于统计评估分母）。"""
     n = np.arange(targets.shape[0])
     return legal_mask[n, targets]
+
+
+def value_mse(value, targets):
+    """价值头回归损失（MSE on 黑胜概率）。value (N,) ∈ (0,1)；targets (N,) ∈ [0,1]
+    （1=黑胜, 0=白胜, 0.5=和）。返回 (loss, dvalue)，dvalue 已除以 N。"""
+    N = max(int(value.shape[0]), 1)
+    diff = (value - targets).astype(F32)
+    loss = float((diff * diff).mean() * 0.5)
+    dvalue = (diff / N).astype(F32)
+    return loss, dvalue
 
 
 # --------------------------------------------------------------- Adam

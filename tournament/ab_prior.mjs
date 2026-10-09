@@ -120,7 +120,7 @@ async function main() {
       }
       let result = "0";
       if (winnerSide === null) {
-        const sc = ref.score();
+        const sc = ref.scoreAuto();
         result = sc.result;
         if (result.startsWith("B+")) winnerSide = 1;
         else if (result.startsWith("W+")) winnerSide = 2;

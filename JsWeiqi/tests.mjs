@@ -6,6 +6,8 @@ import {
   Board, parse_vertex, format_vertex, parse_color, splitmix64, fmt_num,
   ZB, MAX_POINTS, normalize_rules, SIDEKEY_W,
 } from "./rules.mjs";
+import { deadStones, areaWithDead, buildNeigh } from "../tools/scoring.mjs";
+import { CnnPolicy } from "../tools/cnn_forward.mjs";
 import * as ai from "./ai.mjs";
 
 class T {
@@ -331,6 +333,122 @@ export function run_unit_tests() {
     plies += 1;
   }
   t.check("ai.selfplay_legal_and_terminates", alllegal && b.is_over(), "plies=" + plies);
+
+  // ---------- Track A：死子判定（纯函数，与 referee.score(dead) 语义一致） ----------
+  {
+    const SIZE9 = 9;
+    const n2 = SIZE9 * SIZE9;
+    const neigh9 = buildNeigh(SIZE9);
+    // 空盘：无任何死子（空区域无 border，owner=neutral，但空盘没有棋子 → 不应误杀）。
+    {
+      const cells = new Uint8Array(n2);
+      t.check("dead.empty_board_no_false_positive", deadStones(cells, SIZE9, neigh9).size === 0);
+    }
+    // T1 被完全包围的孤子（无气）→ 死（验证「无己方领地 → 死」分支）。
+    {
+      const cells = new Uint8Array(n2);
+      const c = parse_vertex("E5", SIZE9); // 中心
+      cells[c] = 1;
+      for (const v of ["D5", "F5", "E4", "E6"]) cells[parse_vertex(v, SIZE9)] = 2; // 四方白包围
+      const dead = deadStones(cells, SIZE9, neigh9);
+      t.check("dead.surrounded_lone_stone_is_dead", dead.has(c) && dead.size === 1, [...dead]);
+    }
+    // T2 含真眼的黑群 → 活（验证「相邻空域为己方领地 → 活」分支）。
+    {
+      const cells = new Uint8Array(n2);
+      const eye = parse_vertex("E5", SIZE9); // 眼（空）
+      const ring = ["D5", "F5", "E4", "E6"].map((v) => parse_vertex(v, SIZE9));
+      for (const r of ring) cells[r] = 1; // 黑围成眼
+      // 再把眼所在的黑块连成一片（额外黑子，避免只 4 子孤立）：在 D4/D6/F4/F6 也放黑，扩大黑群。
+      for (const v of ["D4", "D6", "F4", "F6", "E3", "E7", "C5", "G5"]) cells[parse_vertex(v, SIZE9)] = 1;
+      const dead = deadStones(cells, SIZE9, neigh9);
+      t.check("dead.group_with_eye_is_alive", !dead.has(eye) && dead.size === 0, [...dead]);
+    }
+    // T3 双活（seki）：双方共享一个 neutral 点 → 双方都应判死（已知局限，诚实记录，非误杀目标）。
+    {
+      const cells = new Uint8Array(n2);
+      // 黑白两群隔一个 neutral 空点相邻，互无眼：构造最小 seki 雏形（仅验证不崩溃且返回集合）。
+      cells[parse_vertex("E5", SIZE9)] = 1;
+      cells[parse_vertex("E7", SIZE9)] = 1;
+      cells[parse_vertex("E4", SIZE9)] = 2;
+      cells[parse_vertex("E6", SIZE9)] = 2; // E5/E6 白黑相邻、E4/E5 黑白相邻… 简化：仅校验函数稳健
+      const dead = deadStones(cells, SIZE9, neigh9);
+      t.check("dead.seki_case_runs", dead instanceof Set);
+    }
+    // areaWithDead：被黑完全包围的白孤子（死）→ 该点归母方领地，白无存活子/领地。
+    {
+      const cells = new Uint8Array(n2);
+      const w = parse_vertex("E5", SIZE9);
+      cells[w] = 2;
+      for (const v of ["D5", "F5", "E4", "E6"]) cells[parse_vertex(v, SIZE9)] = 1; // 黑环
+      const dead = deadStones(cells, SIZE9, neigh9);
+      const [bs, ws] = areaWithDead(cells, SIZE9, neigh9, dead);
+      t.check("dead.area_with_dead_captured_white", ws === 0 && bs === n2, [bs, ws]);
+    }
+    // areaWithDead：dead 为空时退化为普通面积法（全空盘 → 0 子 0 领地，dame=0）。
+    {
+      const cells = new Uint8Array(n2);
+      const [bs, ws] = areaWithDead(cells, SIZE9, neigh9, null);
+      t.check("dead.area_with_empty_dead_eq_area", bs === 0 && ws === 0, [bs, ws]);
+    }
+  }
+
+  // ---------- Track A：dead_stones 开关「关」时行为逐位不变（0 差异） ----------
+  {
+    const b = new Board(9);
+    b.set_stones([[1, _p(9, "E5")], [2, _p(9, "E3")], [1, _p(9, "G5")], [2, _p(9, "C5")]], 1);
+    const [m0, n0, wr0] = ai.genmove(b, 60, 21, null);
+    const [m1, n1, wr1] = ai.genmove(b, 60, 21, { dead_stones: 0 });
+    t.check("dead.off_identical_to_default", m0 === m1 && n0 === n1 && wr0 === wr1, [m0, m1]);
+    // 确定性：同 seed 同 profile 复现。
+    const [m2, n2b, wr2] = ai.genmove(b, 60, 21, { dead_stones: 1 });
+    const [m3, n3, wr3] = ai.genmove(b, 60, 21, { dead_stones: 1 });
+    t.check("dead.on_deterministic", m2 === m3 && n2b === n3 && wr2 === wr3, [m2, m3]);
+  }
+
+  // ---------- Track B：CNN 价值头（与 ml/cnn.py::forwardV 等价；对拍见 _tmp_vh_check.mjs） ----------
+  {
+    // 构造一个最小网络（size=3, cin=6, ch1=ch2=1）。
+    const size = 3, cin = 6, ch1 = 1, ch2 = 1;
+    const mkObj = (withValue) => ({
+      size, cin, ch1, ch2,
+      params: {
+        W1: new Array(ch1 * cin * 9).fill(0),
+        b1: [0],
+        W2: new Array(ch1 * ch2 * 9).fill(0),
+        b2: [0],
+        W3: [0],
+        b3: [0],
+        ...(withValue ? { Wv: [Math.log(4)], bv: [0] } : {}),
+      },
+    });
+    // 无价值头权重 → hasValue=false，valueFrom 恒返 0.5（中性）。
+    {
+      const net = new CnnPolicy(mkObj(false));
+      const cells = new Int8Array(size * size);
+      t.check("cnn.value.no_value_head_returns_half", net.hasValue === false && net.valueFrom(cells, 1, -1) === 0.5,
+        [net.hasValue, net.valueFrom(cells, 1, -1)]);
+    }
+    // 退化但确定：W1=W2=0, b1=0, b2=c>0 → h2 恒为 c；mean=c；z=bv+Wv·c；value=sigmoid(z)。
+    // 取 c=2, Wv=ln4, bv=0 → z=2·ln4=ln16 → value=16/17≈0.94117647。
+    {
+      const obj = mkObj(true);
+      obj.params.b2 = [2.0];
+      const net = new CnnPolicy(obj);
+      const cells = new Int8Array(size * size);
+      const v = net.valueFrom(cells, 1, -1);
+      const exp = 16 / 17;
+      t.check("cnn.value.sigmoid_linear_deterministic", Math.abs(v - exp) < 1e-6, `got=${v} exp=${exp}`);
+    }
+    // 融合开关默认关：cnn_value=0 时 genmove 行为与历史版本一致（不引入价值头依赖）。
+    {
+      const b = new Board(9);
+      b.set_stones([[1, _p(9, "E5")], [2, _p(9, "E3")]], 1);
+      const [m0, n0, wr0] = ai.genmove(b, 50, 21, null);
+      const [m1, n1, wr1] = ai.genmove(b, 50, 21, { cnn_value: 0 });
+      t.check("cnn.value.off_identical_to_default", m0 === m1 && n0 === n1 && wr0 === wr1, [m0, m1]);
+    }
+  }
 
   return { passed: t.passed, failed: t.failed, failures: t.failures };
 }

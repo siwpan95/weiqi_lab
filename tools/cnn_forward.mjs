@@ -52,6 +52,15 @@ export class CnnPolicy {
     this.b2 = Float32Array.from(q.b2);
     this.W3 = Float32Array.from(q.W3);
     this.b3 = Float32Array.from(q.b3);
+    // 价值头权重（Wv: (ch2,), bv: (1,)）；旧权重文件无此两项 → hasValue=false，valueFrom 恒返 0.5。
+    this.hasValue = !!(q && q.Wv && q.bv);
+    if (this.hasValue) {
+      this.Wv = Float32Array.from(q.Wv);
+      this.bv = Float32Array.from(q.bv);
+    } else {
+      this.Wv = null;
+      this.bv = null;
+    }
     this.line = linePlane(this.size);
   }
 
@@ -60,13 +69,14 @@ export class CnnPolicy {
   }
 
   /**
-   * 单样本前向。planes: Float32Array(cin*S*S) → logits Float32Array(S*S)
-   * 逐点卷积（无 im2col 矩阵库），19×19 实测约 20–40 ms/次。
+   * 共享卷积特征提取：planes → [h1, h2]（两层 conv3x3 + relu）。
+   * 策略头（forwardOne）与价值头（valueFrom）共用，避免两套卷积实现漂移。
+   * 逐点卷积（无 im2col 矩阵库），19×19 实测约 20–40 ms/次特征提取。
    */
-  forwardOne(planes, out = new Float32Array(this.size * this.size)) {
+  _convFeatures(planes) {
     const S = this.size;
     const HW = S * S;
-    const { cin, ch1, ch2, W1, b1, W2, b2, W3, b3 } = this;
+    const { cin, ch1, ch2, W1, b1, W2, b2 } = this;
     // ---- layer1: conv3x3 + relu ----
     const h1 = new Float32Array(ch1 * HW);
     for (let o = 0; o < ch1; o++) {
@@ -115,6 +125,18 @@ export class CnnPolicy {
         }
       }
     }
+    return [h1, h2];
+  }
+
+  /**
+   * 单样本前向（策略头）。planes: Float32Array(cin*S*S) → logits Float32Array(S*S)。
+   * 复用 _convFeatures 得到 h2，再做 1×1 卷积 → 每点 logit。
+   */
+  forwardOne(planes, out = new Float32Array(this.size * this.size)) {
+    const S = this.size;
+    const HW = S * S;
+    const { ch2, W3, b3 } = this;
+    const [, h2] = this._convFeatures(planes);
     // ---- layer3: 1x1 → logits ----
     for (let p = 0; p < HW; p++) {
       let acc = b3[0];
@@ -122,6 +144,33 @@ export class CnnPolicy {
       out[p] = acc;
     }
     return out;
+  }
+
+  /**
+   * 价值头前向（黑胜概率 ∈ [0,1]），与 ml/cnn.py::forwardV 严格等价：
+   *   global mean-pool(h2) over 空间维 → linear(Wv,bv) → sigmoid。
+   * 无价值头权重（hasValue=false）时返回 0.5（中性，不影响策略与基线）。
+   * @param {Int8Array|Uint8Array} cells 盘面（0=空,1=黑,2=白）
+   * @param {number} toMove 当前行棋方（1=黑,2=白）—— 决定第 4 个平面取值
+   * @param {number} last 最后一手点索引（-1=无）
+   */
+  valueFrom(cells, toMove, last) {
+    if (!this.hasValue) return 0.5;
+    const planes = makePlanes(cells, this.size, toMove, last, this.line);
+    const [, h2] = this._convFeatures(planes);
+    const HW = this.size * this.size;
+    const ch2 = this.ch2;
+    const invHW = 1.0 / HW;
+    const mean = new Float32Array(ch2);
+    for (let o = 0; o < ch2; o++) {
+      const base = o * HW;
+      let s = 0;
+      for (let p = 0; p < HW; p++) s += h2[base + p];
+      mean[o] = s * invHW;
+    }
+    let z = this.bv[0];
+    for (let o = 0; o < ch2; o++) z += mean[o] * this.Wv[o];
+    return 1.0 / (1.0 + Math.exp(-z));
   }
 
   /** 便捷：由盘面直接得到 logits */

@@ -285,7 +285,7 @@ async function playGame(gno, blackSpec, whiteSpec, clients, budgets, stats, dive
     }
   }
 
-  const sc = ref.score();
+  const sc = ref.scoreAuto();
   const winnerIsBlack = sc.result.startsWith("B+");
   const winnerIsWhite = sc.result.startsWith("W+");
   if (winnerIsBlack) winnerKey = blackSpec.key;

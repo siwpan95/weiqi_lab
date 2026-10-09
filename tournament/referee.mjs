@@ -8,6 +8,10 @@
 
 export const COLS = "ABCDEFGHJKLMNOPQRST";
 
+// 死子判定（纯函数，依赖 tools/scoring.mjs；与引擎侧 ai.mjs 共用同一算法，行为逐位一致）。
+// referee 作为语言无关的权威仲裁层，自动死子修正由此统一出口，避免各引擎各自实现导致跨语言不一致。
+import { deadStones, buildNeigh } from "../tools/scoring.mjs";
+
 export const PROFILES = {
   cn: { ko: "positional", suicide: "forbid", scoring: "area", komi: 7.5 },
   tt: { ko: "positional", suicide: "allow", scoring: "area", komi: 7.5 },
@@ -309,6 +313,17 @@ export class Ref {
     const diff = black - (white + this.komi);
     const result = diff === 0 ? "0" : (diff > 0 ? "B+" + fmtNum(diff) : "W+" + fmtNum(-diff));
     return { black, white, komi: this.komi, dame, result };
+  }
+
+  /** 自动死子判定后的终局计分（面积法）。推翻 docs/RESEARCH.md §8.4「死子自动判定：不实现」：
+   * 终局（两 pass）后自动识别死子并移除，修正「盘上皆活」给错的分差。
+   * 与引擎侧 ai.mjs 的 dead_stones 叶子估值共用 tools/scoring.mjs 的同一算法，语义一致。 */
+  scoreAuto() {
+    const neigh = buildNeigh(this.size);
+    const dead = deadStones(this.cells, this.size, neigh);
+    const pairs = [];
+    for (const m of dead) pairs.push([this.cells[m], formatVertex(m, this.size)]);
+    return this.score(pairs);
   }
 
   /** 复演一手序列：任一手非法即返回 {ok:false, ply, reason}（裁决用） */

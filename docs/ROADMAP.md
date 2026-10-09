@@ -24,8 +24,19 @@
 | 项 | 优先级 | 预期收益 | 成本 / 风险 | 备注 |
 |---|---|---|---|---|
 | **死子判定**（终局计分修正） | 🔴 P0 | 直接消除"盘上皆活"给的错误终局分数 → 估值与自对弈语料质量同步提升；被低估的高杠杆项 | 中（需裁判/计分层改造） | `docs/ENGINE_STRENGTH.md` §6 已标记；建议作为本批之后**第一个动手项** |
-| **价值头**（CNN 加 value head，替代/融合 playout 终局估值） | 🔴 P0 | 直击"±5 点病根"——MCTS 更需要价值估计 | 高（需 GPU + torch，**破例放行**） | `docs/ENGINE_STRENGTH.md` §5-P4-3 |
+| **价值头**（CNN 加 value head，替代/融合 playout 终局估值） | 🔴 P0 | 直击"±5 点病根"——MCTS 更需要价值估计 | 中（**基础价值头走现有 CPU 自研训练路径**：`ml/cnn.py` 是自研前向 + 自研 `Adam`，零依赖即可训练；**仅"更大网络"才需 torch/GPU，届时另走破例放行**） | `docs/ENGINE_STRENGTH.md` §5-P4-3 |
 | **更长 playout / mercy 作为速度旋钮（另测）** | 🟡 P2 | 固定时间预算下可能换回质量 | 低 | `mercy` 已证**不可降噪**（报告 §2-T1），只能当速度旋钮，需固定时间协议重测 |
+
+### 1.1 本批落实记录（Track A / Track B，2026-10-09）
+
+- **Track A — 死子判定（代码已落地；A/B 结论：中性）**
+  - 实现：`tools/scoring.mjs`（纯函数死子检测 + 含死子面积法）、`tournament/referee.mjs::scoreAuto()`（终局计分自动移除死子）、`JsWeiqi/ai.mjs` 叶子估值 `dead_stones` 开关（默认 0，行为逐位不变）。
+  - A/B（`ab-profile-2026-10-09-deadstone-300`，9 路 · 150 pl · 300 局）：**A(无死子) 143 : B(死子) 157，p=0.2530 → 中性**（点估计 +2.3pp 但不显著，Bonferroni 下更弱）。
+  - 结论：死子判定作**叶子估值增强**不带来显著强度提升；但其**终局计分**语义（`scoreAuto`）仍修正"盘上皆活"，作为自对弈语料的干净终局标签保留。引擎 `dead_stones` 维持默认 0。
+- **Track B — 价值头（代码已落地；训练留待下批）**
+  - 实现：`ml/cnn.py` 加 `Wv/bv` 参数 + `forwardV` / `backward(...,dvalue)` / `value_mse` + `load` 旧权重回退；`ml/export_weights.py` 导出 `has_value` 旗标与 `Wv/bv`；`tools/cnn_forward.mjs::valueFrom`（全局均值池化→线性→sigmoid，与 Python 严格对拍通过）；`JsWeiqi/ai.mjs` 叶子估值 `cnn_value` 融合开关（默认 0，行为逐位不变）。
+  - 数值自检：合成价值头网络 JS↔Python 对拍 `value` |d|=2.7e-8、`forwardOne` 重构后最大 |d|=2.4e-7；`tests.mjs` 加 3 个价值头单测（含 `hasValue=false→0.5`、退化 `sigmoid` 确定性）。
+  - 待下批：用 `scoreAuto` 干净语料训练价值头，再开 `cnn_value>0` 做 A/B（Track B5）。
 
 ---
 

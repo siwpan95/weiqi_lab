@@ -29,6 +29,7 @@ def main():
 
     net = PolicyCNN.load(a.cnn)
     p = net.params
+    has_value = "Wv" in p
     w = {
         "protocol": 1,
         "spec": "cnn-weights-v1",
@@ -37,7 +38,9 @@ def main():
         "cin": int(net.cin),
         "ch1": int(net.ch1),
         "ch2": int(net.ch2),
-        "layers": "conv3x3(relu) -> conv3x3(relu) -> conv1x1 -> logits(HW)",
+        "has_value": has_value,
+        "layers": "conv3x3(relu) -> conv3x3(relu) -> conv1x1 -> logits(HW)"
+                  + (" ; value_head: globalmean(h2) -> linear -> sigmoid" if has_value else ""),
         "params": {
             "W1": p["W1"].astype(np.float32).ravel().tolist(),  # (ch1, cin, 3, 3) row-major
             "b1": p["b1"].astype(np.float32).tolist(),
@@ -47,6 +50,9 @@ def main():
             "b3": p["b3"].astype(np.float32).tolist(),
         },
     }
+    if has_value:
+        w["params"]["Wv"] = p["Wv"].astype(np.float32).ravel().tolist()  # (ch2,)
+        w["params"]["bv"] = p["bv"].astype(np.float32).ravel().tolist()  # (1,)
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(w, f, separators=(",", ":"))
     n = sum(len(v) for v in w["params"].values())

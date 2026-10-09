@@ -11,6 +11,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { splitmix64, MASK64 } from "./rules.mjs";
+import { deadStones, areaWithDead } from "../tools/scoring.mjs";
 
 export const PASS = -1;
 export const PASS_MOVE = -1;
@@ -422,6 +423,11 @@ export const DEFAULT_PROFILE = {
   cnn_prior: 0.0,           // PUCT 先验项权重；0 = 关闭
   cnn_prior_max_nodes: 1,   // 每次 genmove 最多做几次 CNN 前向（1 = 仅根节点）
   cnn_prior_weights: null,  // 权重文件路径覆盖；null = spec/cnn_weights-<size>.json
+  // ---- CNN 价值头融合（可选；默认 0 = 关闭 → 行为与历史版本逐位一致）----
+  // 推翻 docs/RESEARCH.md §8.4「价值头：不实现」的设计决策（docs/ROADMAP.md §1 P0）。
+  // >0：叶子估值以权重 w 将"面积法黑胜概率 sv"与"CNN 价值头黑胜概率"线性融合：
+  //     sv_fused = (1-w)*sv + w*cnnVal。w∈[0,1]。需同一权重文件已含价值头（has_value=true）。
+  cnn_value: 0,
   // ---- 惰性探测（可选；默认 0 = 探测全部候选，与原行为逐位一致）----
   probe_k: 0,               // >0：playout 每手最多探测 k 个普通候选（提子点必探，不受限）
   // ---- 渐进加宽（可选；默认 0 = 一次开放全部候选，与原行为逐位一致）----
@@ -439,6 +445,10 @@ export const DEFAULT_PROFILE = {
   // ---- 模式表 playout 偏置（可选；默认 0 = 关闭）----
   pbias: 0.0,               // >0：playout 候选按 w=(1-pbias)+pbias·n·P_model(偏移) 加权（0 = 均匀，原行为）
   pbias_model: null,        // 表路径；null = spec/markov_model-<size>.json（缺失/不可用 → 自动禁用）
+  // ---- 死子判定（可选；默认 0 = 关闭，行为逐位不变）----
+  // 推翻 docs/RESEARCH.md §8.4「死子自动判定：不实现」的设计决策；仅在 MCTS 叶子估值（playout 真终局）启用，
+  // 修正"盘上皆活"给错终局分（docs/ROADMAP.md §1 P0）。>0：叶子用 areaWithDead(死子移除后面积法) 替代 pb.area()。
+  dead_stones: 0,
 };
 
 // ---------------------------------------------------------------- CNN 先验
@@ -1217,6 +1227,7 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
   const size = board.size;
   const n2 = board.n2;
   const neigh = board.neigh;
+  const deadOn = Number(pr["dead_stones"]) > 0; // 死子判定（叶子估值）：默认关 → 行为与历史版本逐位一致
   const suicide_allow = board.rules["suicide"] === "allow";
   const full_legal = board.legal_moves();
   const full_set = new Set(full_legal);
@@ -1353,13 +1364,31 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
     }
     const leaf_to_move = node.to_move;
     pb = playout(pb, rng, pr, max_moves, plOpts);
-    const [bt, wt] = pb.area();
+    // 叶子估值：playout 以两 pass 终局返回（pb.passes>=2），此时死子判定合法适用。
+    // dead_stones>0：移除死子后面积法（修正"盘上皆活"误判）；否则退化为原 pb.area()。
+    let bt, wt;
+    if (deadOn) {
+      const dead = deadStones(pb.cells, size, neigh);
+      [bt, wt] = areaWithDead(pb.cells, size, neigh, dead);
+    } else {
+      [bt, wt] = pb.area();
+    }
     // 终局估值：以"分差"归一化（而非纯胜负）。v ∈ [0,1]，0.5 为均势；scale = n2/2。
     const diff_black = bt - wt - board.komi;
     const scale = Number(pr["score_scale"]) > 0 ? Number(pr["score_scale"]) : n2 / 2.0;
     let sv = 0.5 + 0.5 * (diff_black / scale);
     if (sv < 0.0) sv = 0.0;
     else if (sv > 1.0) sv = 1.0;
+    // ---- CNN 价值头融合（可选；cnn_value=0 时跳过 → 行为与历史版本逐位一致）----
+    const cnnVW = Number(pr["cnn_value"]) > 0 ? Number(pr["cnn_value"]) : 0;
+    if (cnnVW > 0) {
+      let vnet = cnnNet;
+      if (!vnet) vnet = loadCnnNet(size, pr["cnn_prior_weights"] || null);
+      if (vnet) {
+        const cnnVal = vnet.valueFrom(pb.cells, leaf_to_move, pb.last); // 黑胜概率 ∈ [0,1]
+        sv = (1.0 - cnnVW) * sv + cnnVW * cnnVal;
+      }
+    }
     const res_leaf = leaf_to_move === 1 ? sv : 1.0 - sv;
     for (const nd of chain) {
       const v = nd.to_move === leaf_to_move ? res_leaf : 1.0 - res_leaf;
