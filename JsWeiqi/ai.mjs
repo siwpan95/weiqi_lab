@@ -8,6 +8,7 @@
 // - 性能：PBoard 用 stamp 数组（零 set 分配）+ 快路径（提子预检 / 气数下界 / 单子判定）。
 
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { splitmix64, MASK64 } from "./rules.mjs";
 
@@ -61,6 +62,7 @@ export class PBoard {
     this._seenGen = 0;
     this._sNlibs = 0;
     this._sLib0 = -1;
+    this._sLib1 = -1;
     this._sMLen = 0;
   }
 
@@ -90,6 +92,7 @@ export class PBoard {
     if (want_members) members[mlen++] = idx;
     let nlibs = 0;
     let lib0 = -1;
+    let lib1 = -1;
     while (sp > 0) {
       const cur = stack[--sp];
       const nbs = neigh[cur];
@@ -101,6 +104,7 @@ export class PBoard {
             libstamp[nb] = gen;
             nlibs += 1;
             if (lib0 < 0) lib0 = nb;
+            else if (nlibs === 2) lib1 = nb; // 第二口气（2 气棋块启发用）
           }
         } else if (v === color && stamp[nb] !== gen) {
           stamp[nb] = gen;
@@ -111,6 +115,7 @@ export class PBoard {
     }
     this._sNlibs = nlibs;
     this._sLib0 = lib0;
+    this._sLib1 = lib1;
     this._sMLen = mlen;
   }
 
@@ -303,6 +308,58 @@ export class PBoard {
     return out;
   }
 
+  // 2 气棋块的"好气点位"启发（Fuego playout 策略层之一；profile `lib2` 启用）。
+  // 取最后一手邻域内的己方"恰 2 气"棋块，试它的两口气，挑"落子后该块仍 ≥2 气（含提子）"的点。
+  // 返回值：优先着法点，或 -1（无）。评分：提子优先，其次落子后该块气数多者。
+  two_lib_move(color, rng) {
+    const last = this.last;
+    if (last < 0) return -1;
+    const cells = this.cells;
+    const neigh = this.neigh;
+    const seenStamp = this._seenStamp;
+    const sgen = this._seenGen + 1;
+    this._seenGen = sgen;
+    const nbsL = neigh[last];
+    let best = -1;
+    let bestQ = -1;
+    for (let li = -1, LL = nbsL.length; li < LL; li++) {
+      const nb = li < 0 ? last : nbsL[li];
+      if (cells[nb] !== color || seenStamp[nb] === sgen) continue;
+      // 必要预检：某成员空邻 ≥3 → 该块气数 ≥3，不可能是 2 气块（无假阴性）
+      let empties = 0;
+      const nbs2 = neigh[nb];
+      for (let qi = 0, QL = nbs2.length; qi < QL; qi++) {
+        if (cells[nbs2[qi]] === 0) {
+          empties += 1;
+          if (empties > 2) break;
+        }
+      }
+      if (empties > 2) continue;
+      this._scan(nb, true);
+      const nlibs = this._sNlibs;
+      const lib0 = this._sLib0;
+      const lib1 = this._sLib1;
+      const mlen = this._sMLen;
+      const members = this._scanMembers;
+      for (let i = 0; i < mlen; i++) seenStamp[members[i]] = sgen;
+      if (nlibs !== 2 || lib0 < 0 || lib1 < 0) continue;
+      for (let xi = 0; xi < 2; xi++) {
+        const x = xi === 0 ? lib0 : lib1;
+        const [ok, cap, , olibs] = this.probe(color, x);
+        if (!ok) continue;
+        if (cap === 0 && olibs <= 1) continue; // 自我打吃（无提子）→ 不是"好气"
+        const q = cap * 100 + (olibs > 4 ? 4 : olibs); // 提子 ≫ 气数
+        if (q > bestQ) {
+          bestQ = q;
+          best = x;
+        } else if (q === bestQ && rng.random() < 0.5) {
+          best = x; // 同分随机打破（保持 playout 多样性）
+        }
+      }
+    }
+    return best;
+  }
+
   // 面积计分（盘上皆活）。→ [black_area, white_area]
   area() {
     const cells = this.cells;
@@ -370,6 +427,13 @@ export const DEFAULT_PROFILE = {
   // ---- 渐进加宽（可选；默认 0 = 一次开放全部候选，与原行为逐位一致）----
   pw_c: 0,                  // >0：候选开放数 k = max(pw_min, ⌈c·√(N+1)⌉)，随节点访问数增长
   pw_min: 8,                // 初始最少开放候选数（防止根节点过早收窄）
+  // ---- 2 气棋块的好气点位（可选；默认 0 = 关闭，行为与原实现逐位一致）----
+  lib2: 0,                  // >0：以该概率采用"2 气棋块的好气点位"（Fuego playout 分层；1 = 总是）
+  // ---- LGR（Last-Good-Reply，可选；默认 0 = 关闭）----
+  lgr: 0,                   // >0：playout 中优先复用"上次应对这一手的着法"（Fuego/Baier-Drake 风格）
+  // ---- 模式表 playout 偏置（可选；默认 0 = 关闭）----
+  pbias: 0.0,               // >0：playout 候选按 w=(1-pbias)+pbias·n·P_model(偏移) 加权（0 = 均匀，原行为）
+  pbias_model: null,        // 表路径；null = spec/markov_model-<size>.json（缺失/不可用 → 自动禁用）
 };
 
 // ---------------------------------------------------------------- CNN 先验
@@ -557,6 +621,250 @@ function candidates(pb, color, radius) {
   return out;
 }
 
+// ---------------------------------------------------------------- 模式表 playout 偏置（pbias）
+// 用 tools/markov.mjs 的模式条件转移模型（JSON，`policy` 字段）给 playout 候选加权：
+//   w_i = (1-pbias)·1 + pbias·n·P_model(候选偏移)
+// 表命中时取代"贴近最后一手 / 均匀"两段启发式；表未命中 → 原行为（`pbias=0` 时逐位一致）。
+// 签名用**基 4 整数编码**（与 tools/markov.mjs::signatureEx/signatureCrossEx 语义一致，
+// 交叉校验见 tools/tests_markov.mjs 的 `sigParity` 测试）：同长度数字串的字典序 = 整数值序。
+
+let _pbTab = null;      // 载入后的表 { size, radius, moveRadius, backoffMin, frames, main, cross }
+let _pbTabKey = null;
+let _pbTabFail = null;
+let _pbWarned = false;
+
+function _loadPatternTable(size, pathOverride) {
+  const p0 = pathOverride || _defaultTablePath(size);
+  const key = size + "|" + p0;
+  if (_pbTabKey === key) return _pbTab;
+  _pbTabKey = key;
+  _pbTab = null;
+  _pbTabFail = null;
+  let p = p0;
+  if (!pathOverride && !fs.existsSync(p)) {
+    // 回退：通用 `spec/markov_model.json`（仅当尺寸匹配时采用）
+    const alt = path.join(path.dirname(p), "markov_model.json");
+    if (fs.existsSync(alt)) p = alt;
+  }
+  try {
+    const obj = JSON.parse(fs.readFileSync(p, "utf8"));
+    const pol = obj.policy;
+    if (!pol || !pol.table) throw new Error("JSON 缺少 policy.table");
+    const R = Math.trunc(pol.moveRadius ?? 3);
+    const dim = 2 * R + 1;
+    const build = (rows) => {
+      const m = new Map();
+      for (const [k, row] of Object.entries(rows || {})) {
+        // ⚠️ 键形归一：模型里的键是**零填充的基 4 数字串**（如 "000121010"），
+        // 引擎侧签名是**数值串**（"1604"）→ 统一成数值串，否则查表永不命中。
+        const nk = /^[0-3]+$/.test(k) ? String(parseInt(k, 4)) : k;
+        const g = new Float32Array(dim * dim);
+        let tot = 0;
+        for (const v of Object.values(row)) tot += v;
+        if (tot <= 0) continue;
+        for (const [off, v] of Object.entries(row)) {
+          const [dx, dy] = off.split(",").map(Number);
+          if (dx < -R || dx > R || dy < -R || dy > R) continue;
+          g[(dy + R) * dim + (dx + R)] = v / tot;
+        }
+        const cur = m.get(nk);
+        if (cur) {
+          // 键碰撞（不同朝向的键归一后相同 → 不应发生，防御性合并）
+          for (let i = 0; i < g.length; i++) cur.g[i] += g[i];
+          cur.tot += tot;
+        } else {
+          m.set(nk, { g, tot });
+        }
+      }
+      return m;
+    };
+    _pbTab = {
+      size: Number(obj.size || size),
+      radius: Math.trunc(pol.radius ?? 1),
+      moveRadius: R,
+      dim,
+      backoffMin: Number(pol.backoffMin ?? 0),
+      backoffRadius: Math.trunc(pol.backoffRadius ?? 0),
+      canonical: pol.frames === "canonical",
+      main: build(pol.table),
+      cross: build(pol.cross),
+      spec: obj.spec || null,
+    };
+  } catch (e) {
+    _pbTabFail = e.message;
+  }
+  return _pbTab;
+}
+
+function _defaultTablePath(size) {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.join(here, "..", "spec", `markov_model-${size}.json`);
+}
+
+// ---- 快速签名（基 4 整数；语义与 tools/markov.mjs 一致）----
+// SYM8 的线性映射系数（[a,b,c,d]：(x,y) → (a·x+b·y, c·x+d·y)），顺序与 markov.mjs 相同
+const _SYM_M = [
+  [1, 0, 0, 1], [0, -1, 1, 0], [-1, 0, 0, -1], [0, 1, -1, 0],
+  [-1, 0, 0, 1], [1, 0, 0, -1], [0, 1, 1, 0], [0, -1, -1, 0],
+];
+const _SYM_INV_IDX = [0, 3, 2, 1, 4, 5, 6, 7];
+let _sigKey = -1;  // 主签名返回值（模块 scratch，避免分配）
+let _sigSym = 0;
+let _csKey = -1;   // 十字签名
+let _csRot = 0;
+let _xfX = 0;      // 偏移变换 scratch
+let _xfY = 0;
+
+/** 主签名（(2r+1)² 邻域，8 对称取字典序最小）→ 写入 _sigKey/_sigSym */
+function sigMain(cells, size, toMove, last, radius) {
+  const lx = last % size;
+  const ly = (last - lx) / size;
+  let best = Infinity;
+  let bestS = 0;
+  for (let s = 0; s < 8; s++) {
+    const m = _SYM_M[s];
+    let code = 0;
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx === 0 && dy === 0) {
+          code = code * 4 + 2; // 中心 = 最后一手（对方）
+          continue;
+        }
+        const nx = m[0] * dx + m[1] * dy;
+        const ny = m[2] * dx + m[3] * dy;
+        const x = lx + nx;
+        const y = ly + ny;
+        let d;
+        if (x < 0 || y < 0 || x >= size || y >= size) d = 3;
+        else {
+          const v = cells[y * size + x];
+          d = v === 0 ? 0 : (v === toMove ? 1 : 2);
+        }
+        code = code * 4 + d;
+      }
+    }
+    if (code < best) {
+      best = code;
+      bestS = s;
+    }
+  }
+  _sigKey = best;
+  _sigSym = bestS;
+}
+
+/** 十字签名（N,E,S,W 四格，4 旋转取字典序最小）→ 写入 _csKey/_csRot */
+function sigCross(cells, size, toMove, last) {
+  const lx = last % size;
+  const ly = (last - lx) / size;
+  let best = Infinity;
+  let bestR = 0;
+  for (let r = 0; r < 4; r++) {
+    let code = 0;
+    for (let k = 0; k < 4; k++) {
+      const j = (k + r) % 4;
+      const dx = j === 0 ? 0 : j === 1 ? 1 : j === 2 ? 0 : -1;
+      const dy = j === 0 ? 1 : j === 1 ? 0 : j === 2 ? -1 : 0;
+      const x = lx + dx;
+      const y = ly + dy;
+      let d;
+      if (x < 0 || y < 0 || x >= size || y >= size) d = 3;
+      else {
+        const v = cells[y * size + x];
+        d = v === 0 ? 0 : (v === toMove ? 1 : 2);
+      }
+      code = code * 4 + d;
+    }
+    if (code < best) {
+      best = code;
+      bestR = r;
+    }
+  }
+  _csKey = best;
+  _csRot = bestR;
+}
+
+/** 盘面偏移 → 规范帧偏移（8 对称）；结果写入 _xfX/_xfY */
+function xfToCanonical8(sym, dx, dy) {
+  const m = _SYM_M[_SYM_INV_IDX[sym]];
+  _xfX = m[0] * dx + m[1] * dy;
+  _xfY = m[2] * dx + m[3] * dy;
+}
+
+/** 盘面偏移 → 规范帧偏移（4 旋转，与十字签名对应）；结果写入 _xfX/_xfY
+ *  方向约定与 tools/markov.mjs::crossOffset(rot, x, y, inv=true) 一致：
+ *  规范帧 ← 盘面帧 = R^(4-rot)，R(x,y)=(y,-x)（与 signatureCross 的 dirs 顺序对应） */
+function xfToCanonical4(rot, dx, dy) {
+  let k = (4 - (rot % 4)) % 4;
+  let x = dx;
+  let y = dy;
+  for (let i = 0; i < k; i++) {
+    const nx = y;
+    const ny = -x;
+    x = nx;
+    y = ny;
+  }
+  _xfX = x;
+  _xfY = y;
+}
+
+// 当前局面命中的表行（null = 未命中）
+let _pbGrid = null;
+let _pbSym = 0;
+let _pbCrossKind = false;
+
+/** 查表：命中则写入 _pbGrid（概率网格）/ _pbSym（对称下标）/ _pbCrossKind；返回是否命中 */
+function pbLookup(tab, cells, size, toMove, last) {
+  if (last < 0) return false;
+  sigMain(cells, size, toMove, last, tab.radius);
+  const km = String(_sigKey);
+  const row = tab.main.get(km);
+  if (row && row.tot >= tab.backoffMin) {
+    _pbGrid = row.g;
+    _pbSym = _sigSym;
+    _pbCrossKind = false;
+    return true;
+  }
+  if (tab.cross.size > 0) {
+    if (tab.backoffRadius >= 1) {
+      sigMain(cells, size, toMove, last, tab.backoffRadius);
+      const r2 = tab.cross.get(String(_sigKey));
+      if (r2) {
+        _pbGrid = r2.g;
+        _pbSym = _sigSym;
+        _pbCrossKind = false;
+        return true;
+      }
+    } else {
+      sigCross(cells, size, toMove, last);
+      const r2 = tab.cross.get(String(_csKey));
+      if (r2) {
+        _pbGrid = r2.g;
+        _pbSym = _csRot;
+        _pbCrossKind = true;
+        return true;
+      }
+    }
+  }
+  _pbGrid = null;
+  return false;
+}
+
+/** 测试钩子：暴露引擎侧快速签名与偏移变换，供 tools/tests_markov.mjs 与 markov.mjs 交叉校验 */
+export function sigProbe(cells, size, toMove, last, radius = 1) {
+  sigMain(cells, size, toMove, last, radius);
+  const main = { key: String(_sigKey), sym: _sigSym };
+  sigCross(cells, size, toMove, last);
+  const cross = { key: String(_csKey), rot: _csRot };
+  return { main, cross };
+}
+
+/** 测试钩子：盘面偏移 → 规范帧偏移（8 对称 / 4 旋转） */
+export function xfProbe(sym, dx, dy, cross = false) {
+  if (cross) xfToCanonical4(sym, dx, dy);
+  else xfToCanonical8(sym, dx, dy);
+  return [_xfX, _xfY];
+}
+
 // ---------------------------------------------------------------- 惰性探测（probe_k > 0）
 // p 落子是否**可能**提掉对方子。
 // 判据（保守必要条件，**不漏真提子**、可能多报——多报的代价只是多一次 probe）：
@@ -669,13 +977,25 @@ function collectLazy(pb, rng, color, probeK, cands, urgent) {
   }
 }
 
-// 轻量 playout：提子/救子优先 → 贴近最后一手 → 随机；避免自填气与填眼。
-function playout(pb, rng, pr, max_moves) {
+// 轻量 playout：提子/救子优先 → LGR 回放 → 模式表偏置 → 贴近最后一手 → 随机；避免自填气与填眼。
+// opts（可选）：
+//   lgr  = Int32Array(n2*n2)  Last-Good-Reply 表（键 = 倒数第二手*n2 + 最后一手）
+//   tab  = 已载入的模式表（见 _loadPatternTable）/ w = 偏置强度 pbias
+function playout(pb, rng, pr, max_moves, opts = null) {
   const cap_bias = pr["capture_bias"];
   const pat_bias = pr["pattern_bias"];
   const large_margin = pr["mercy"] * pb.n2;
   const probeK = Math.trunc(Number(pr["probe_k"]) || 0);
+  const lgrTab = opts && opts.lgr ? opts.lgr : null;
+  const pbTab = opts && opts.tab ? opts.tab : null;
+  const pbW = opts ? Number(opts.w) || 0 : 0;
+  const pbOn = pbTab !== null && pbW > 0;
+  const lgrOn = lgrTab !== null;
+  const lgrN2 = lgrOn ? pb.n2 : 0;
+  const lib2P = Number(pr["lib2"]) || 0; // 0 = 关闭（不消耗随机数，行为不变）
+  const pbScratch = pbOn ? new Float64Array(pb.n2) : null; // 加权采样缓冲（每 playout 一次分配）
   let moves = 0;
+  let mPrev = -1; // LGR：本 playout 内"最后一手之前的那一手"（-1 = 未知 / 上一手为过手）
   while (pb.passes < 2 && moves < max_moves) {
     const color = pb.side;
     const last = pb.last;
@@ -732,15 +1052,77 @@ function playout(pb, rng, pr, max_moves) {
     for (const m of pb.rescue_moves(color)) {
       if (cells[m] === 0 && urgent.indexOf(m) < 0) urgent.push(m);
     }
+    // ---- LGR 查询（lgrOn 时）：提子/救子之后、启发式之前，复用"上次在同一 (倒数第二手, 最后一手)
+    // 情境下选出的应手"。合法性以 probe 复核（空点 / 非劫 / 非禁自填），并保持默认策略同级的
+    // 自填气过滤（cap=0 且救援气=1 的应手视为坏应手，丢弃）。lgrOn=false 时本段完全不执行。----
+    let lgrMove = -1;
+    if (lgrOn && mPrev >= 0 && last >= 0) {
+      const cand = lgrTab[mPrev * lgrN2 + last];
+      if (cand >= 0 && cells[cand] === 0) {
+        const [ok, cap, , olibs] = pb.probe(color, cand);
+        if (ok && (cap > 0 || olibs !== 1)) lgrMove = cand;
+      }
+    }
+    // ---- 2 气棋块的好气点位（lib2 > 0）：无提子/救子时，优先防守/延伸 2 气棋块 ----
+    let lib2Move = -1;
+    if (lib2P > 0 && urgent.length === 0) lib2Move = pb.two_lib_move(color, rng);
+    // ---- 模式表查表（pbias > 0，惰性：仅在"未走提子/lib2/LGR"时才需要）----
+    let pbHit = false;
+    if (pbOn && urgent.length === 0 && lib2Move < 0 && lgrMove < 0) {
+      pbHit = pbLookup(pbTab, pb.cells, pb.size, color, last);
+    }
     if (cands.length === 0) {
+      if (lgrMove >= 0 && urgent.length === 0) {
+        // 局部无候选但 LGR 有效应手 → 走应手而不是过手（真正的终局才过手）
+        pb.apply(color, lgrMove);
+        moves += 1;
+        mPrev = last;
+        continue;
+      }
       pb.play_pass(color);
       moves += 1;
+      mPrev = -1;
       continue;
     }
     const r = rng.random();
     let m;
     if (urgent.length > 0 && r < cap_bias) {
       m = urgent[rng.randint(urgent.length)];
+    } else if (lib2Move >= 0 && rng.random() < lib2P) {
+      m = lib2Move; // 2 气棋块的好气点位（防守/延伸优先于启发式）
+    } else if (lgrMove >= 0) {
+      m = lgrMove; // LGR 命中：无提子/救子时的优先应手（不额外消耗随机数）
+    } else if (pbHit) {
+      // ---- 模式表加权（pbias）：w_i = (1-pbias) + pbias·n·P_model(偏移) ----
+      // pbHit 已由上方惰性查表求得（_pbGrid/_pbSym/_pbCrossKind 就绪）
+      const lx2 = last % pb.size;
+      const ly2 = (last - lx2) / pb.size;
+      const R = pbTab.moveRadius;
+      const dim = pbTab.dim;
+      let total = 0;
+      for (let i = 0, L = cands.length; i < L; i++) {
+        const p = cands[i];
+        const dxb = (p % pb.size) - lx2;
+        const dyb = Math.floor(p / pb.size) - ly2;
+        if (pbTab.canonical) {
+          if (_pbCrossKind) xfToCanonical4(_pbSym, dxb, dyb);
+          else xfToCanonical8(_pbSym, dxb, dyb);
+        } else {
+          _xfX = dxb;
+          _xfY = dyb;
+        }
+        let q = 0;
+        if (_xfX >= -R && _xfX <= R && _xfY >= -R && _xfY <= R) q = _pbGrid[(_xfY + R) * dim + (_xfX + R)];
+        const w = (1 - pbW) + pbW * cands.length * q;
+        pbScratch[i] = w;
+        total += w;
+      }
+      let rr = rng.random() * total;
+      m = cands[cands.length - 1];
+      for (let i = 0, L = cands.length; i < L; i++) {
+        rr -= pbScratch[i];
+        if (rr <= 0) { m = cands[i]; break; }
+      }
     } else if (last >= 0 && rng.random() < pat_bias) {
       const local = cands.filter((p) => chebyshev(p, last, pb.size) <= 1);
       m = local.length > 0 ? local[rng.randint(local.length)] : cands[rng.randint(cands.length)];
@@ -749,6 +1131,11 @@ function playout(pb, rng, pr, max_moves) {
     }
     pb.apply(color, m);
     moves += 1;
+    if (lgrOn) {
+      // 记录"这一情境下的应手"（last-writer-wins；下一次再遇到同一 (mPrev, last) 即复用）
+      if (mPrev >= 0 && last >= 0) lgrTab[mPrev * lgrN2 + last] = m;
+      mPrev = last;
+    }
     if (large_margin > 0) {
       const [bt, wt] = pb.area();
       if (bt - wt > large_margin || wt - bt > large_margin) break;
@@ -828,6 +1215,26 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
   const pwC = Number(pr["pw_c"]) || 0;
   const pwMin = Math.max(1, Math.trunc(Number(pr["pw_min"]) || 8));
   const radius = Math.trunc(Number(pr["prune_radius"]));
+  // ---- LGR（可选）：每 genmove 分配一张表（键 = 倒数第二手・n2 + 最后一手，值 = 应手），
+  // 在该次搜索的全部 playout 间共享（同一次 genmove 内累积经验；跨手不复用 → 结果可复现）。----
+  const lgrTab = Math.trunc(Number(pr["lgr"]) || 0) > 0 ? new Int32Array(n2 * n2).fill(-1) : null;
+  // ---- 模式表 playout 偏置（可选；默认 0 = 关闭）----
+  const pbW = Number(pr["pbias"]) || 0;
+  let pbTab = null;
+  if (pbW > 0) {
+    pbTab = _loadPatternTable(size, pr["pbias_model"] || null);
+    if (pbTab && pbTab.size !== size && !_pbWarned) {
+      // 3×3（radius 1）/十字表与盘径无关（局部上下文 + 相对偏移），跨盘径使用**允许但告警**；
+      // 5×5（radius 2）表跨盘径使用信息会失真 → 也在此一并告警。
+      _pbWarned = true;
+      console.warn(`[ai] pbias：表尺寸 ${pbTab.size} ≠ 棋盘 ${size}（跨盘径使用；radius=1/十字表本就可跨径，radius≥2 会失真）`);
+    }
+    if (!pbTab && !_pbWarned) {
+      _pbWarned = true;
+      console.warn(`[ai] pbias=${pbW} 但模式表不可用 → 已按原 playout 运行：${_pbTabFail}`);
+    }
+  }
+  const plOpts = (lgrTab || pbTab) ? { lgr: lgrTab, tab: pbTab, w: pbW } : null;
   let root = new Node(PASS_MOVE, board.side);
   root.expanded = true;
   // ---- 树重用（可选）：把"对手实际下的那手"对应的子树提升为新根，继承其访问统计 ----
@@ -928,7 +1335,7 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
       }
     }
     const leaf_to_move = node.to_move;
-    pb = playout(pb, rng, pr, max_moves);
+    pb = playout(pb, rng, pr, max_moves, plOpts);
     const [bt, wt] = pb.area();
     // 终局估值：以"分差"归一化（而非纯胜负）。v ∈ [0,1]，0.5 为均势；scale = n2/2。
     const diff_black = bt - wt - board.komi;

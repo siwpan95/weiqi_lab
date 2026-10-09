@@ -40,8 +40,8 @@ function cellsFromBlock(size, last, nb) {
   return cells;
 }
 
-// 训练：模式条件转移模型（与 tools/train_markov.mjs 相同的默认参数 1 / 3 / 4）
-const policy = new PatternPolicy(1, 3, 4);
+// 训练：模式条件转移模型（与 tools/train_markov.mjs 相同的默认参数 1 / 3 / 4，含对称帧修正）
+const policy = new PatternPolicy(1, 3, 4, 0, true);
 let trained = 0;
 for (const s of train.samples) {
   const cells = cellsFromBlock(size, s.l, s.nb);

@@ -30,7 +30,7 @@
 | `docs/PORTING.md` | 移植简报（交付物、验收门、性能要点） |
 | `docs/RESEARCH.md` | 联网调研纪要（来源 + 许可证 + 借用范围） |
 | `docs/TIER3_LEARNING.md` | 学习型组件（Markov / CNN）路线与实测对比 |
-| `docs/ENGINE_STRENGTH.md` | **引擎强度提升路线（evidence-based）**：性能剖析、搜索改进、playout 策略、先验质量 |
+| `docs/ENGINE_STRENGTH.md` | **引擎强度提升路线（evidence-based）**：性能剖析、搜索改进、playout 策略、先验质量、实测 A/B |
 | `harness/` | 跨引擎一致性总入口：引擎清单 + JSON-stdio 客户端 + 三项校验 |
 | `tournament/` | 独立裁判层 + 循环赛 runner + 开局库 + 战报（`reports/`） |
 | `tools/` | 共享 I/O 层 + 学习组件：`sgf.mjs` `gtp.mjs` `regress.mjs` `markov.mjs` `train_markov.mjs` `import_human.mjs` `distill_to_table.mjs` `eval_model.mjs` `cnn_forward.mjs` + `gen_golden.py` |
@@ -77,22 +77,30 @@
 
 | 实验 | 模型 | 语料 | 盘径 | **top-1** | top-3 | 均匀基线 | 相对均匀 |
 |---|---|---|---|---|---|---|---|
-| 基线（第一轮） | Markov 模式模型 | 自对弈 cpp vs go（60 局） | 9 | 4.1% | 11.3% | 4.55% | 0.91× |
-| **T3-A 对照** | Markov 模式模型 | 自对弈（12 局 / 30 playouts） | **19** | **0.9%** | 1.7% | 0.97% | **0.93×** |
-| **T3-A 语料升级** | Markov 模式模型 | **人类职业棋谱 PGD（6000 局）** | **19** | **7.3%** | 21.7% | 0.43% | **17.0×** |
+| 基线（第一轮） | Markov 模式模型 | 自对弈 cpp vs go（60 局） | 9 | 8.9% | 17.9% | 4.55% | 1.95× |
+| **T3-A 对照** | Markov 模式模型 | 自对弈（12 局 / 30 playouts） | **19** | **1.3%** | 3.1% | 0.97% | **1.34×** |
+| **T3-A 语料升级** | Markov 模式模型 | **人类职业棋谱 PGD（6000 局）** | **19** | **21.3%** | 36.8% | 0.43% | **50.1×** |
 | **T3-C 容量升级** | **CNN（numpy，~2 万参数）** | 同上人类语料 | 19 | **25.84%** | 42.54% | 0.41% | 62.9× |
+| **T3-D 蒸馏（零依赖）** | **CNN 蒸馏模式表** | 同上人类语料 | 19 | **22.70%** | 37.3% | 0.43% | **53.3×** |
 | 对照 | CNN（numpy） | 自对弈（60 局） | 9 | 17.58% | 38.76% | 4.55% | 3.9× |
 
 **两条轴都真实有效，且已用同盘径对照严格验证**：在**同为 19 路**、同一模型、同一代码下，
-只把语料从"弱引擎自对弈"换成"人类职业棋谱"，相对均匀基线增益从 **0.93× 跳到 17.0×**
+只把语料从"弱引擎自对弈"换成"人类职业棋谱"，相对均匀基线增益从 **1.34× 跳到 50.1×**
 （紧邻偏置 2.34× → 18.1×；稳态热点从 `pass`/噪声变成**星位**）；
-在此基础上换成 CNN，top-1 再升到 **25.84%**（模式模型的 2.26×）。
+在此基础上换成 CNN，top-1 再升到 **25.84%**（模式表的 1.21×）。
 详见 `docs/TIER3_LEARNING.md` 与 `tournament/reports/{markov,cnn}-*.md`。
 
-**零依赖化的两条路径（实测对比）**：① 模式表蒸馏（`tools/distill_to_table.mjs`）——19 路与计数表持平（有损），
-9 路则 4.13% → **7.80%**（1.9×）；② **权重导出 + 纯 JS 前向**（`tools/cnn_forward.mjs`，
-权重 `spec/cnn_weights-*.json` 仅 0.22MB）——与 Python **逐位等价**（max|Δlogit| 3.8e-6），
-**保留完整预测力且运行期零依赖**。工程上取 ②：`OPENINGS=cnn` 即用纯 JS 前向生成开局。
+> ⚠️ **2026-10-09 对称帧修正**：上表数字均为修正后。此前版本的表存在**偏移未做对称归一**的语义缺陷
+> （同一棋形键下混入 8 个朝向的偏移 → 分布被抹平），使计数表/蒸馏表的 top-1 被严重低估
+> （人类 19 路 7.25% → **21.34%**、CNN 蒸馏 7.33% → **22.70%**；合成可判定用例 2/8 → 8/8）。
+> 修正后"蒸馏路径有损"的旧结论被推翻：蒸馏表以 **18 µs/手（CNN 的 1/22）零依赖**保留了 CNN 约 **88%** 的 top-1。
+> 细节与回归测试见 `docs/TIER3_LEARNING.md` §2.6、`tools/tests_markov.mjs`。
+
+**零依赖化的两条路径（实测对比）**：① 模式表蒸馏（`tools/distill_to_table.mjs`）——修正帧后 19 路 **22.70%**
+（≈CNN 的 88%，**有损但代价极小、零依赖**），9 路 4.13% → **10.47%**（2.3×）；② **权重导出 + 纯 JS 前向**
+（`tools/cnn_forward.mjs`，权重 `spec/cnn_weights-*.json` 仅 0.22MB）——与 Python **逐位等价**
+（max|Δlogit| 3.8e-6），**无损保留完整预测力且运行期零依赖**。工程上 ② 用于开局（`OPENINGS=cnn`），
+① 用于 playout 偏置（`pbias_model`，见 `docs/ENGINE_STRENGTH.md` §3.1）。
 
 **依赖边界**：破例引入的 `numpy` **仅在 `ml/`**（隔离 venv）；引擎/`tools/`/`harness/`/`tournament/` 仍零依赖。
 人类棋谱**不随仓分发**（`.cache/`、`spec/games/human-*.jsonl` 已 gitignore），按 `docs/RESEARCH.md` §7 的命令 + SHA 可复现。
@@ -126,6 +134,7 @@ cd harness && node host.mjs              # 期望 ALL GREEN
 
 # ③ 共享 I/O 层
 node tools/tests_io.mjs                  # SGF/GTP/让子自测（165 项）
+node tools/tests_markov.mjs              # Markov 模式表自测（29 项：对称帧/签名交叉校验）
 node tools/gtp.mjs py                    # 用 GTP v2 驱动 PyWeiqi（可接 GoGui/Sabaki）
 node tools/regress.mjs                   # CGTC 式回归（6 引擎 72/72）
 

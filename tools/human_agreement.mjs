@@ -2,13 +2,16 @@
 //
 // 动机：9 路 CNN 学自**弱引擎**语料（先验偏角部）；19 路 CNN 学自**人类职业棋谱**（先验正常）。
 // 本探针在人类 19 路局面集上对比"引擎选点 vs 人类实战着法"的吻合率：
-//   A = cnn_prior 0（纯搜索）
-//   B = cnn_prior w（搜索 + 人类 CNN 先验）
-// 若 B 的吻合率显著高于 A，则说明**先验机制有效，且效果取决于教师质量**（与 T3-A 结论一致）。
+//   A = 基线 profile（默认 {})
+//   B = 实验 profile（默认 {cnn_prior: PRIOR}）
+// 若 B 的吻合率显著高于 A，则说明**该机制有效，且效果取决于教师质量**（与 T3-A 结论一致）。
 //
-// 用法：
+// 用法（通用 profile 版）：
 //   node tools/human_agreement.mjs --corpus spec/games/human-2026-10-09.jsonl --size 19 \
-//        --positions 16 --playouts 60 --prior 3 [--seed 7]
+//        --positions 16 --playouts 60 --prior 3 [--seed 7] \
+//        [--profA '{"probe_k":3}' --profB '{"probe_k":3,"pbias":0.5,"pbias_model":"..."}'] \
+//        [--start 4800]   # 起点行号（跳过训练集，做**留出**探针；训练集为前 80% 局）
+//   ⚠️ 若被评估的表正是用该语料前 80% 训练的，必须用 --start 跳过训练段，否则一致性被高估。
 
 import fs from "node:fs";
 import path from "node:path";
@@ -29,6 +32,11 @@ const POSITIONS = Number(arg("positions", 16));
 const PLAYOUTS = Number(arg("playouts", 60));
 const PRIOR = Number(arg("prior", 3));
 const SEED = Number(arg("seed", 7));
+const START = Number(arg("start", 0));
+const LABEL_A = arg("labelA", null);
+const LABEL_B = arg("labelB", null);
+const PROF_A = arg("profA", null) ? JSON.parse(arg("profA")) : {};
+const PROF_B = arg("profB", null) ? JSON.parse(arg("profB")) : { cnn_prior: PRIOR };
 
 function normalCdf(z) {
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
@@ -64,7 +72,7 @@ function z2(x1, n1, x2, n2) {
 const lines = fs.readFileSync(CORPUS, "utf8").trim().split("\n").filter(Boolean);
 const rows = [];
 let picked = 0;
-for (let gi = 0; gi < lines.length && picked < POSITIONS; gi += 7) {
+for (let gi = START; gi < lines.length && picked < POSITIONS; gi += 7) {
   const g = JSON.parse(lines[gi]);
   if (Number(g.size) !== SIZE) continue;
   // 取该局第 ~40 手附近的局面（开局已过、尚未终局）
@@ -78,10 +86,10 @@ for (let gi = 0; gi < lines.length && picked < POSITIONS; gi += 7) {
       const human = v;
       if (human >= 0) {
         const t0 = Date.now();
-        const [mvA] = ai.genmove(b, PLAYOUTS, SEED + gi, {});
+        const [mvA] = ai.genmove(b, PLAYOUTS, SEED + gi, PROF_A);
         const tA = Date.now() - t0;
         const t1 = Date.now();
-        const [mvB] = ai.genmove(b, PLAYOUTS, SEED + gi, { cnn_prior: PRIOR });
+        const [mvB] = ai.genmove(b, PLAYOUTS, SEED + gi, PROF_B);
         const tB = Date.now() - t1;
         // CNN 先验自身的 top-1（不搜索，直接取策略最大）
         let cnnTop = -1;
@@ -122,15 +130,16 @@ const L = [];
 L.push(`# 人类一致度探针 — ${new Date().toISOString().slice(0, 10)}`);
 L.push("");
 L.push(`- 语料：\`${path.basename(CORPUS)}\`（19 路人类职业棋谱）· 局面：各局第 ~40 手 · n=${n}`);
-L.push(`- 引擎：JsWeiqi · ${PLAYOUTS} playouts/手 · A = 先验关闭 · B = cnn_prior=${PRIOR}（人类 CNN）`);
+L.push(`- 引擎：JsWeiqi · ${PLAYOUTS} playouts/手 · 局面采样起点行 ${START}${START > 0 ? "（**留出段**）" : ""}`);
+L.push(`- A = \`${LABEL_A || JSON.stringify(PROF_A)}\` · B = \`${LABEL_B || JSON.stringify(PROF_B)}\``);
 L.push("");
 L.push("| 配置 | 与人类着法吻合 | 吻合率 | 邻近(≤2 路) | 邻近率 | 平均耗时 |");
 L.push("|---|---|---|---|---|---|");
 const nA = rows.filter((r) => r.nearA).length;
 const nB = rows.filter((r) => r.nearB).length;
 const nC = rows.filter((r) => r.nearCnn).length;
-L.push(`| A 纯搜索（先验关闭） | ${hA}/${n} | **${(hA / n * 100).toFixed(1)}%** | ${nA}/${n} | ${(nA / n * 100).toFixed(1)}% | ${(rows.reduce((a, r) => a + r.tA, 0) / n / 1000).toFixed(1)}s |`);
-L.push(`| B 搜索 + 人类 CNN 先验 | ${hB}/${n} | **${(hB / n * 100).toFixed(1)}%** | ${nB}/${n} | ${(nB / n * 100).toFixed(1)}% | ${(rows.reduce((a, r) => a + r.tB, 0) / n / 1000).toFixed(1)}s |`);
+L.push(`| A 基线 | ${hA}/${n} | **${(hA / n * 100).toFixed(1)}%** | ${nA}/${n} | ${(nA / n * 100).toFixed(1)}% | ${(rows.reduce((a, r) => a + r.tA, 0) / n / 1000).toFixed(1)}s |`);
+L.push(`| B 实验组 | ${hB}/${n} | **${(hB / n * 100).toFixed(1)}%** | ${nB}/${n} | ${(nB / n * 100).toFixed(1)}% | ${(rows.reduce((a, r) => a + r.tB, 0) / n / 1000).toFixed(1)}s |`);
 L.push(`| （参考）CNN top-1 不搜索 | ${hC}/${n} | ${(hC / n * 100).toFixed(1)}% | ${nC}/${n} | ${(nC / n * 100).toFixed(1)}% | — |`);
 L.push("");
 L.push(`- 随机基线（约 320 空点）：~${(1 / emptyAvg * 100).toFixed(2)}%`);

@@ -274,7 +274,8 @@ async function main() {
   console.log(`训练/留出：${train.length} 局 / ${test.length} 局`);
 
   // 训练：模式条件模型（3×3 主 + 十字退避）+ 全局落子转移模型
-  const policy = new PatternPolicy(1, 3, 4);
+  // canonicalFrames=true：偏移随签名一并做对称归一（修正"朝向抹平"，详见 tools/markov.mjs 注释）
+  const policy = new PatternPolicy(1, 3, 4, 0, true);
   const chain = new MoveChain(SIZE);
   for (const g of train) {
     for (const s of g.samples) policy.observe(s, SIZE, s.next);

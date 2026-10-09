@@ -164,6 +164,34 @@ const SYM8 = [
   (x, y) => [x, y], (x, y) => [-y, x], (x, y) => [-x, -y], (x, y) => [y, -x],
   (x, y) => [-x, y], (x, y) => [x, -y], (x, y) => [y, x], (x, y) => [-y, -x],
 ];
+const SYM_INV = [0, 3, 2, 1, 4, 5, 6, 7]; // SYM8 各元素的逆（该集合构成群，逆仍在集合内）
+
+// ---- 对称帧（canonical frames）----
+// 问题：签名把 8 个对称的棋形归一到同一个键，但**应手偏移**若按盘面原始帧记录，
+// 同一键下会混入 8 个不同朝向的偏移 → 分布被"抹平"（实测 top-1 仅 6.8%，
+// 修正帧后 22.0%）。修正：记录时把偏移转进**规范帧**，查询时再转回**盘面帧**。
+// 语义：signature 的编码位置 (dx,dy) 读取盘面位置 f_s(dx,dy)
+//   ⇒ 规范帧 → 盘面帧：board = SYM8[s](canonical)
+//   ⇒ 盘面帧 → 规范帧：canonical = SYM8[SYM_INV[s]](board)
+/** 主表（8 对称）偏移变换：s = signatureEx 的 argmin 下标；inv=true 时取逆 */
+export function symOffset(s, dx, dy, inv = false) {
+  return SYM8[inv ? SYM_INV[s] : s](dx, dy);
+}
+
+// 十字签名的方向表（与 signatureCross 内一致）：N,E,S,W
+const DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+/** 十字表旋转映射：规范帧 → 盘面帧（r = 旋转数，与 signatureCrossEx 的 rot 对应）；inv=true 取逆 */
+export function crossOffset(r, dx, dy, inv = false) {
+  let k = r % 4;
+  if (inv) k = (4 - k) % 4;
+  for (let i = 0; i < k; i++) {
+    const nx = dy;
+    const ny = -dx;
+    dx = nx;
+    dy = ny;
+  }
+  return [dx, dy];
+}
 
 function encode(cells, size, x, y, toMove) {
   if (x < 0 || y < 0 || x >= size || y >= size) return "3";
@@ -173,12 +201,13 @@ function encode(cells, size, x, y, toMove) {
 }
 
 /** 主上下文：以最后一手为中心的 (2r+1)² 邻域，8 对称取字典序最小。r=1 → 3×3。 */
-export function signature(sample, size, radius = 1) {
+export function signatureEx(sample, size, radius = 1) {
   const { cells, toMove, last } = sample;
-  if (last < 0) return "PASSCTX";
+  if (last < 0) return { key: "PASSCTX", sym: 0 };
   const lx = last % size;
   const ly = Math.floor(last / size);
   let best = null;
+  let bestS = 0;
   for (let s = 0; s < 8; s++) {
     const f = SYM8[s];
     let enc = "";
@@ -192,57 +221,90 @@ export function signature(sample, size, radius = 1) {
         enc += encode(cells, size, lx + nx, ly + ny, toMove);
       }
     }
-    if (best === null || enc < best) best = enc;
+    if (best === null || enc < best) { best = enc; bestS = s; }
   }
-  return best;
+  return { key: best, sym: bestS };
+}
+
+export function signature(sample, size, radius = 1) {
+  return signatureEx(sample, size, radius).key;
 }
 
 /** 退避上下文：4 正交邻域（N,E,S,W），4 旋转取字典序最小。状态空间 4⁴=256。 */
-export function signatureCross(sample, size) {
+export function signatureCrossEx(sample, size) {
   const { cells, toMove, last } = sample;
-  if (last < 0) return "PCROSS";
+  if (last < 0) return { key: "PCROSS", rot: 0 };
   const lx = last % size;
   const ly = Math.floor(last / size);
-  const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   let best = null;
+  let bestR = 0;
   for (let r = 0; r < 4; r++) {
     let enc = "";
     for (let k = 0; k < 4; k++) {
-      const [dx, dy] = dirs[(k + r) % 4];
+      const [dx, dy] = DIRS[(k + r) % 4];
       enc += encode(cells, size, lx + dx, ly + dy, toMove);
     }
-    if (best === null || enc < best) best = enc;
+    if (best === null || enc < best) { best = enc; bestR = r; }
   }
-  return best;
+  return { key: best, rot: bestR };
+}
+
+export function signatureCross(sample, size) {
+  return signatureCrossEx(sample, size).key;
 }
 
 const offKey = (dx, dy) => `${dx},${dy}`;
 const parseOff = (k) => k.split(",").map(Number);
 
-function normalize(row) {
+// xf（可选）：把行内偏移从**规范帧**转回**盘面帧**（canonicalFrames 模式用）
+function normalize(row, xf = null) {
   const total = Array.from(row.values()).reduce((a, b) => a + b, 0);
   return Array.from(row.entries())
-    .map(([k, c]) => ({ off: parseOff(k), p: c / total, n: c }))
+    .map(([k, c]) => {
+      let off = parseOff(k);
+      if (xf) off = xf(off);
+      return { off, p: c / total, n: c };
+    })
     .sort((a, b) => b.p - a.p || a.off[0] - b.off[0] || a.off[1] - b.off[1]);
 }
 
 export class PatternPolicy {
-  constructor(radius = 1, moveRadius = 3, backoffMin = 1, backoffRadius = 0) {
+  constructor(radius = 1, moveRadius = 3, backoffMin = 1, backoffRadius = 0, canonicalFrames = false) {
     this.radius = radius;
     this.moveRadius = moveRadius;
     this.backoffMin = backoffMin; // 主表该上下文样本数 < backoffMin 时退避
     // 退避上下文半径：0 = 用十字邻域（signatureCross，零依赖默认）；
     // ≥1 = 用同族的 radius 棋形签名（如 主=5×5 / 退避=3×3 的层次化回退）
     this.backoffRadius = backoffRadius;
+    // 对称帧（推荐 true；旧模型为 false = 偏移按盘面原始帧记录，分布被朝向抹平）
+    this.canonicalFrames = canonicalFrames;
     this.table = new Map(); // 主上下文 -> Map(offset -> count/weight)
     this.cross = new Map(); // 退避上下文 -> Map(offset -> count/weight)
     this.seen = 0;
   }
 
   backoffKey(sample, size) {
-    return this.backoffRadius >= 1
-      ? signature(sample, size, this.backoffRadius)
-      : signatureCross(sample, size);
+    return this.backoffKeyEx(sample, size).key;
+  }
+
+  /** 退避上下文键 + 该表对应的对称信息（kind: "main"(8 对称) | "cross"(4 旋转)） */
+  backoffKeyEx(sample, size) {
+    if (this.backoffRadius >= 1) {
+      return { kind: "main", ...signatureEx(sample, size, this.backoffRadius) };
+    }
+    return { kind: "cross", ...signatureCrossEx(sample, size) };
+  }
+
+  /** 盘面帧偏移 → 表内帧（记录用） */
+  _toTableFrame(kind, sym, dx, dy) {
+    if (!this.canonicalFrames) return [dx, dy];
+    return kind === "cross" ? crossOffset(sym, dx, dy, true) : symOffset(sym, dx, dy, true);
+  }
+
+  /** 表内帧偏移 → 盘面帧偏移（查询用） */
+  _toBoardFrame(kind, sym, off) {
+    if (!this.canonicalFrames) return off;
+    return kind === "cross" ? crossOffset(sym, off[0], off[1], false) : symOffset(sym, off[0], off[1], false);
   }
 
   observe(sample, size, next) {
@@ -250,27 +312,39 @@ export class PatternPolicy {
     const dx = (next % size) - (sample.last % size);
     const dy = Math.floor(next / size) - Math.floor(sample.last / size);
     if (Math.abs(dx) > this.moveRadius || Math.abs(dy) > this.moveRadius) return false;
-    const add = (map, key) => {
+    const add = (map, key, k) => {
       if (!map.has(key)) map.set(key, new Map());
       const row = map.get(key);
-      const k = offKey(dx, dy);
       row.set(k, (row.get(k) || 0) + 1);
     };
-    add(this.table, signature(sample, size, this.radius));
-    add(this.cross, this.backoffKey(sample, size));
+    const me = signatureEx(sample, size, this.radius);
+    const be = this.backoffKeyEx(sample, size);
+    const [mx, my] = this._toTableFrame("main", me.sym, dx, dy);
+    const [bx, by] = this._toTableFrame(be.kind, be.kind === "cross" ? be.rot : be.sym, dx, dy);
+    add(this.table, me.key, offKey(mx, my));
+    add(this.cross, be.key, offKey(bx, by));
     this.seen += 1;
     return true;
   }
 
-  /** → {dist, source: "main"|"cross"}；两者皆无 → null */
+  /** → {dist, source: "main"|"cross"}；两者皆无 → null（dist 的 off 一律为**盘面帧**偏移） */
   distribution(sample, size) {
-    const main = this.table.get(signature(sample, size, this.radius));
+    const me = signatureEx(sample, size, this.radius);
+    const main = this.table.get(me.key);
     if (main) {
       const n = Array.from(main.values()).reduce((a, b) => a + b, 0);
-      if (n >= this.backoffMin) return { dist: normalize(main), source: "main" };
+      if (n >= this.backoffMin) {
+        const xf = this.canonicalFrames ? (off) => this._toBoardFrame("main", me.sym, off) : null;
+        return { dist: normalize(main, xf), source: "main" };
+      }
     }
-    const cross = this.cross.get(this.backoffKey(sample, size));
-    if (cross) return { dist: normalize(cross), source: "cross" };
+    const be = this.backoffKeyEx(sample, size);
+    const cross = this.cross.get(be.key);
+    if (cross) {
+      const sym = be.kind === "cross" ? be.rot : be.sym;
+      const xf = this.canonicalFrames ? (off) => this._toBoardFrame(be.kind, sym, off) : null;
+      return { dist: normalize(cross, xf), source: "cross" };
+    }
     return null;
   }
 
@@ -305,11 +379,13 @@ export class PatternPolicy {
     const c = {};
     for (const [k, row] of this.cross) c[k] = Object.fromEntries(row);
     return { radius: this.radius, moveRadius: this.moveRadius, backoffMin: this.backoffMin,
-      backoffRadius: this.backoffRadius, samples: this.seen, table: t, cross: c };
+      backoffRadius: this.backoffRadius, frames: this.canonicalFrames ? "canonical" : "raw",
+      samples: this.seen, table: t, cross: c };
   }
 
   static fromJSON(obj) {
-    const p = new PatternPolicy(obj.radius, obj.moveRadius, obj.backoffMin, obj.backoffRadius || 0);
+    const p = new PatternPolicy(obj.radius, obj.moveRadius, obj.backoffMin, obj.backoffRadius || 0,
+      obj.frames === "canonical");
     for (const [k, row] of Object.entries(obj.table || {})) p.table.set(k, new Map(Object.entries(row)));
     for (const [k, row] of Object.entries(obj.cross || {})) p.cross.set(k, new Map(Object.entries(row)));
     p.seen = obj.samples || 0;

@@ -1,0 +1,1628 @@
+{
+ "settings": {
+  "engine": "js",
+  "size": 9,
+  "playouts": 150,
+  "games": 200,
+  "profA": {
+   "probe_k": 3
+  },
+  "profB": {
+   "probe_k": 3,
+   "lib2": 1
+  },
+  "labelA": "probe_k=3（基线）",
+  "labelB": "+lib2=1（2 气好气点位）",
+  "tag": "lib2-200"
+ },
+ "wA": 96,
+ "wB": 104,
+ "draws": 0,
+ "anomalies": 0,
+ "avgMoves": 113.26,
+ "msA": 41.38550494350282,
+ "msB": 47.79565524549629,
+ "p": 0.42371066732983387,
+ "games": [
+  {
+   "gno": 1,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+3.5",
+   "plies": 102,
+   "anomaly": null
+  },
+  {
+   "gno": 2,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+7.5",
+   "plies": 91,
+   "anomaly": null
+  },
+  {
+   "gno": 3,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+44.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 4,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+73.5",
+   "plies": 145,
+   "anomaly": null
+  },
+  {
+   "gno": 5,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+40.5",
+   "plies": 124,
+   "anomaly": null
+  },
+  {
+   "gno": 6,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+9.5",
+   "plies": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 7,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+1.5",
+   "plies": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 8,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+26.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 9,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+10.5",
+   "plies": 94,
+   "anomaly": null
+  },
+  {
+   "gno": 10,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+34.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 11,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+40.5",
+   "plies": 122,
+   "anomaly": null
+  },
+  {
+   "gno": 12,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+38.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 13,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+9.5",
+   "plies": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 14,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+15.5",
+   "plies": 85,
+   "anomaly": null
+  },
+  {
+   "gno": 15,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+40.5",
+   "plies": 124,
+   "anomaly": null
+  },
+  {
+   "gno": 16,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+0.5",
+   "plies": 98,
+   "anomaly": null
+  },
+  {
+   "gno": 17,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+73.5",
+   "plies": 149,
+   "anomaly": null
+  },
+  {
+   "gno": 18,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+3.5",
+   "plies": 99,
+   "anomaly": null
+  },
+  {
+   "gno": 19,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+16.5",
+   "plies": 104,
+   "anomaly": null
+  },
+  {
+   "gno": 20,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 144,
+   "anomaly": null
+  },
+  {
+   "gno": 21,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+24.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 22,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 148,
+   "anomaly": null
+  },
+  {
+   "gno": 23,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+11.5",
+   "plies": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 24,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+18.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 25,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+73.5",
+   "plies": 167,
+   "anomaly": null
+  },
+  {
+   "gno": 26,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+35.5",
+   "plies": 145,
+   "anomaly": null
+  },
+  {
+   "gno": 27,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+7.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 28,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+73.5",
+   "plies": 145,
+   "anomaly": null
+  },
+  {
+   "gno": 29,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+36.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 30,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+8.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 31,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+17.5",
+   "plies": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 32,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+24.5",
+   "plies": 118,
+   "anomaly": null
+  },
+  {
+   "gno": 33,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+10.5",
+   "plies": 118,
+   "anomaly": null
+  },
+  {
+   "gno": 34,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+34.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 35,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+9.5",
+   "plies": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 36,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+46.5",
+   "plies": 126,
+   "anomaly": null
+  },
+  {
+   "gno": 37,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+7.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 38,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+38.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 39,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+0.5",
+   "plies": 99,
+   "anomaly": null
+  },
+  {
+   "gno": 40,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 144,
+   "anomaly": null
+  },
+  {
+   "gno": 41,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+36.5",
+   "plies": 110,
+   "anomaly": null
+  },
+  {
+   "gno": 42,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+20.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 43,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+22.5",
+   "plies": 96,
+   "anomaly": null
+  },
+  {
+   "gno": 44,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+2.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 45,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+4.5",
+   "plies": 95,
+   "anomaly": null
+  },
+  {
+   "gno": 46,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+12.5",
+   "plies": 110,
+   "anomaly": null
+  },
+  {
+   "gno": 47,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+73.5",
+   "plies": 145,
+   "anomaly": null
+  },
+  {
+   "gno": 48,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+50.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 49,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+88.5",
+   "plies": 142,
+   "anomaly": null
+  },
+  {
+   "gno": 50,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+22.5",
+   "plies": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 51,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+73.5",
+   "plies": 155,
+   "anomaly": null
+  },
+  {
+   "gno": 52,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+10.5",
+   "plies": 91,
+   "anomaly": null
+  },
+  {
+   "gno": 53,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+25.5",
+   "plies": 121,
+   "anomaly": null
+  },
+  {
+   "gno": 54,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+14.5",
+   "plies": 93,
+   "anomaly": null
+  },
+  {
+   "gno": 55,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+11.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 56,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+12.5",
+   "plies": 91,
+   "anomaly": null
+  },
+  {
+   "gno": 57,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+5.5",
+   "plies": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 58,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 138,
+   "anomaly": null
+  },
+  {
+   "gno": 59,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+26.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 60,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+54.5",
+   "plies": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 61,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+21.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 62,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+16.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 63,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+16.5",
+   "plies": 90,
+   "anomaly": null
+  },
+  {
+   "gno": 64,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 136,
+   "anomaly": null
+  },
+  {
+   "gno": 65,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+5.5",
+   "plies": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 66,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+6.5",
+   "plies": 102,
+   "anomaly": null
+  },
+  {
+   "gno": 67,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+9.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 68,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+28.5",
+   "plies": 123,
+   "anomaly": null
+  },
+  {
+   "gno": 69,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+25.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 70,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+73.5",
+   "plies": 151,
+   "anomaly": null
+  },
+  {
+   "gno": 71,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+9.5",
+   "plies": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 72,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+4.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 73,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+7.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 74,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+72.5",
+   "plies": 148,
+   "anomaly": null
+  },
+  {
+   "gno": 75,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+2.5",
+   "plies": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 76,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+9.5",
+   "plies": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 77,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+28.5",
+   "plies": 132,
+   "anomaly": null
+  },
+  {
+   "gno": 78,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+25.5",
+   "plies": 129,
+   "anomaly": null
+  },
+  {
+   "gno": 79,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+13.5",
+   "plies": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 80,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+13.5",
+   "plies": 91,
+   "anomaly": null
+  },
+  {
+   "gno": 81,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+50.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 82,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 140,
+   "anomaly": null
+  },
+  {
+   "gno": 83,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+12.5",
+   "plies": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 84,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 134,
+   "anomaly": null
+  },
+  {
+   "gno": 85,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+7.5",
+   "plies": 101,
+   "anomaly": null
+  },
+  {
+   "gno": 86,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+73.5",
+   "plies": 157,
+   "anomaly": null
+  },
+  {
+   "gno": 87,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+13.5",
+   "plies": 85,
+   "anomaly": null
+  },
+  {
+   "gno": 88,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+44.5",
+   "plies": 126,
+   "anomaly": null
+  },
+  {
+   "gno": 89,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+54.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 90,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+24.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 91,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+21.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 92,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+29.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 93,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+88.5",
+   "plies": 144,
+   "anomaly": null
+  },
+  {
+   "gno": 94,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+30.5",
+   "plies": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 95,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+73.5",
+   "plies": 139,
+   "anomaly": null
+  },
+  {
+   "gno": 96,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+12.5",
+   "plies": 101,
+   "anomaly": null
+  },
+  {
+   "gno": 97,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+1.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 98,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+66.5",
+   "plies": 128,
+   "anomaly": null
+  },
+  {
+   "gno": 99,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+6.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 100,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+2.5",
+   "plies": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 101,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+34.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 102,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+7.5",
+   "plies": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 103,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+29.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 104,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+5.5",
+   "plies": 94,
+   "anomaly": null
+  },
+  {
+   "gno": 105,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+9.5",
+   "plies": 95,
+   "anomaly": null
+  },
+  {
+   "gno": 106,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+16.5",
+   "plies": 125,
+   "anomaly": null
+  },
+  {
+   "gno": 107,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+20.5",
+   "plies": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 108,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+7.5",
+   "plies": 87,
+   "anomaly": null
+  },
+  {
+   "gno": 109,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+14.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 110,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+1.5",
+   "plies": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 111,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+46.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 112,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+10.5",
+   "plies": 125,
+   "anomaly": null
+  },
+  {
+   "gno": 113,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+3.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 114,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+20.5",
+   "plies": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 115,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+17.5",
+   "plies": 118,
+   "anomaly": null
+  },
+  {
+   "gno": 116,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+22.5",
+   "plies": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 117,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+17.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 118,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+7.5",
+   "plies": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 119,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+6.5",
+   "plies": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 120,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+32.5",
+   "plies": 123,
+   "anomaly": null
+  },
+  {
+   "gno": 121,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+8.5",
+   "plies": 93,
+   "anomaly": null
+  },
+  {
+   "gno": 122,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+9.5",
+   "plies": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 123,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+6.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 124,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 132,
+   "anomaly": null
+  },
+  {
+   "gno": 125,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+22.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 126,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+31.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 127,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+14.5",
+   "plies": 92,
+   "anomaly": null
+  },
+  {
+   "gno": 128,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+36.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 129,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+3.5",
+   "plies": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 130,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+8.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 131,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+0.5",
+   "plies": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 132,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+11.5",
+   "plies": 99,
+   "anomaly": null
+  },
+  {
+   "gno": 133,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+12.5",
+   "plies": 94,
+   "anomaly": null
+  },
+  {
+   "gno": 134,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+27.5",
+   "plies": 122,
+   "anomaly": null
+  },
+  {
+   "gno": 135,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+46.5",
+   "plies": 124,
+   "anomaly": null
+  },
+  {
+   "gno": 136,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+28.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 137,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+23.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 138,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+10.5",
+   "plies": 91,
+   "anomaly": null
+  },
+  {
+   "gno": 139,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+10.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 140,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+25.5",
+   "plies": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 141,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+4.5",
+   "plies": 95,
+   "anomaly": null
+  },
+  {
+   "gno": 142,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+15.5",
+   "plies": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 143,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+8.5",
+   "plies": 99,
+   "anomaly": null
+  },
+  {
+   "gno": 144,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+88.5",
+   "plies": 150,
+   "anomaly": null
+  },
+  {
+   "gno": 145,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+26.5",
+   "plies": 102,
+   "anomaly": null
+  },
+  {
+   "gno": 146,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+8.5",
+   "plies": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 147,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+14.5",
+   "plies": 120,
+   "anomaly": null
+  },
+  {
+   "gno": 148,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+13.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 149,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+46.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 150,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+20.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 151,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+16.5",
+   "plies": 92,
+   "anomaly": null
+  },
+  {
+   "gno": 152,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+4.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 153,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+10.5",
+   "plies": 98,
+   "anomaly": null
+  },
+  {
+   "gno": 154,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+38.5",
+   "plies": 128,
+   "anomaly": null
+  },
+  {
+   "gno": 155,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+24.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 156,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+32.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 157,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+88.5",
+   "plies": 160,
+   "anomaly": null
+  },
+  {
+   "gno": 158,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+12.5",
+   "plies": 98,
+   "anomaly": null
+  },
+  {
+   "gno": 159,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+36.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 160,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+28.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 161,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+38.5",
+   "plies": 110,
+   "anomaly": null
+  },
+  {
+   "gno": 162,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+26.5",
+   "plies": 124,
+   "anomaly": null
+  },
+  {
+   "gno": 163,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+2.5",
+   "plies": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 164,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+34.5",
+   "plies": 120,
+   "anomaly": null
+  },
+  {
+   "gno": 165,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+34.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 166,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+9.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 167,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+5.5",
+   "plies": 101,
+   "anomaly": null
+  },
+  {
+   "gno": 168,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+73.5",
+   "plies": 139,
+   "anomaly": null
+  },
+  {
+   "gno": 169,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+44.5",
+   "plies": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 170,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+7.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 171,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+5.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 172,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+20.5",
+   "plies": 104,
+   "anomaly": null
+  },
+  {
+   "gno": 173,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+4.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 174,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+5.5",
+   "plies": 87,
+   "anomaly": null
+  },
+  {
+   "gno": 175,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+24.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 176,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+12.5",
+   "plies": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 177,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+9.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 178,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+23.5",
+   "plies": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 179,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+20.5",
+   "plies": 98,
+   "anomaly": null
+  },
+  {
+   "gno": 180,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+16.5",
+   "plies": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 181,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+30.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 182,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+2.5",
+   "plies": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 183,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+64.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 184,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+21.5",
+   "plies": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 185,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+24.5",
+   "plies": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 186,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+26.5",
+   "plies": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 187,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+10.5",
+   "plies": 94,
+   "anomaly": null
+  },
+  {
+   "gno": 188,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+73.5",
+   "plies": 149,
+   "anomaly": null
+  },
+  {
+   "gno": 189,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+20.5",
+   "plies": 102,
+   "anomaly": null
+  },
+  {
+   "gno": 190,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+3.5",
+   "plies": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 191,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+54.5",
+   "plies": 120,
+   "anomaly": null
+  },
+  {
+   "gno": 192,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+4.5",
+   "plies": 94,
+   "anomaly": null
+  },
+  {
+   "gno": 193,
+   "aIsBlack": false,
+   "winnerIsA": false,
+   "result": "B+3.5",
+   "plies": 120,
+   "anomaly": null
+  },
+  {
+   "gno": 194,
+   "aIsBlack": true,
+   "winnerIsA": true,
+   "result": "B+33.5",
+   "plies": 129,
+   "anomaly": null
+  },
+  {
+   "gno": 195,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+24.5",
+   "plies": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 196,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+28.5",
+   "plies": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 197,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+54.5",
+   "plies": 124,
+   "anomaly": null
+  },
+  {
+   "gno": 198,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+8.5",
+   "plies": 85,
+   "anomaly": null
+  },
+  {
+   "gno": 199,
+   "aIsBlack": false,
+   "winnerIsA": true,
+   "result": "W+22.5",
+   "plies": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 200,
+   "aIsBlack": true,
+   "winnerIsA": false,
+   "result": "W+5.5",
+   "plies": 85,
+   "anomaly": null
+  }
+ ]
+}

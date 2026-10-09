@@ -23,7 +23,7 @@
 
 import fs from "node:fs";
 import { Ref, parseVertex } from "../tournament/referee.mjs";
-import { signature, signatureCross } from "./markov.mjs";
+import { signatureEx, signatureCrossEx, symOffset, crossOffset } from "./markov.mjs";
 
 function arg(name, dflt = null) {
   const i = process.argv.indexOf("--" + name);
@@ -82,19 +82,23 @@ for (const { g, idx } of games) {
     const row = rows.get(ply);
     if (row && last >= 0 && v >= 0) {
       const sample = { cells: ref.cells.slice(), toMove: color, last };
-      const mainKey = signature(sample, SIZE, RADIUS_MAIN);
-      const backKey = RADIUS_BACKOFF >= 1
-        ? signature(sample, SIZE, RADIUS_BACKOFF)
-        : signatureCross(sample, SIZE);
+      const main = signatureEx(sample, SIZE, RADIUS_MAIN);
+      const backEx = RADIUS_BACKOFF >= 1
+        ? { kind: "main", ...signatureEx(sample, SIZE, RADIUS_BACKOFF) }
+        : { kind: "cross", ...signatureCrossEx(sample, SIZE) };
       const lx = last % SIZE;
       const ly = Math.floor(last / SIZE);
       for (const [pt, p] of row.top) {
         const dx = (pt % SIZE) - lx;
         const dy = Math.floor(pt / SIZE) - ly;
         if (Math.abs(dx) > MOVE_RADIUS || Math.abs(dy) > MOVE_RADIUS) continue;
-        const k = `${dx},${dy}`;
-        add(table, mainKey, k, p);
-        add(cross, backKey, k, p);
+        // 对称帧：偏移转进规范帧后再累加（修正"朝向抹平"，与 tools/markov.mjs 注释一致）
+        const [kdx, kdy] = symOffset(main.sym, dx, dy, true);
+        const [bdx, bdy] = backEx.kind === "cross"
+          ? crossOffset(backEx.rot, dx, dy, true)
+          : symOffset(backEx.sym, dx, dy, true);
+        add(table, main.key, `${kdx},${kdy}`, p);
+        add(cross, backEx.key, `${bdx},${bdy}`, p);
       }
       used += 1;
     } else if (row) {
@@ -161,6 +165,7 @@ const model = {
   policy: {
     radius: RADIUS_MAIN, moveRadius: MOVE_RADIUS,
     backoffMin: MIN_MAIN, backoffRadius: RADIUS_BACKOFF,
+    frames: "canonical",
     samples: used, table: toObj(finalMain), cross: toObj(finalCross),
   },
 };

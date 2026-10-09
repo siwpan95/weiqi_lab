@@ -50,6 +50,16 @@ printf '{"id":1,"cmd":"hello"}\n{"id":2,"cmd":"quit"}\n' | <driver 启动命令>
   眼位过滤、空盘中央区候选、显式过手规则（不在树内）。
 - 性能：越快越好；Python 参考约 100–300 playouts/s（9 路），Rust/C++ 应高 2–3 个数量级。
 
+### 4.1 可选强度开关（当前**仅 JS 实现**，默认全关 → 默认行为仍跨语言等价）
+
+`JsWeiqi/ai.mjs` 的 `profile` 键（详见 `docs/ENGINE_STRENGTH.md`）：`probe_k`（惰性探测）、
+`pw_c`/`pw_min`（渐进加宽，**300 局 A/B 已证显著**）、`tree_reuse`、`lgr`、`lib2`、`pbias`(+`pbias_model`)、
+`cnn_prior`(+权重)。**默认值全部为"关闭"**，因此跨语言循环赛在默认配置下仍公平。
+逐位一致性由 `tools/tests_markov.mjs`（签名交叉校验）与行为快照工具守护。
+
+⚠️ **移植待办**：上述开关尚未移植到 Py/Rust/C++/C#/Go —— 若要在循环赛中比较"启用强度开关后的各语言"，
+需先完成移植；否则应继续以默认配置比较。
+
 ## 5. 性能实现要点（Python 参考踩坑记录，请直接采用）
 
 1. 棋块扫描用 **stamp 数组**（代际标记），不要每次分配 `set`。

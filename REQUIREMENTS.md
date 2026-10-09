@@ -84,6 +84,7 @@ cd harness && node host.mjs                    # 期望 ALL GREEN
 
 # ③ 共享 I/O 层（SGF / GTP / 让子）
 cd tools && node tests_io.mjs                  # 期望 PASS: 165 passed, 0 failed
+cd tools && node tests_markov.mjs              # 期望 PASS: 29 passed, 0 failed（对称帧 / 引擎签名交叉校验）
 cd tools && node regress.mjs                   # CGTC 式回归：6 引擎 72/72
 
 # ④ 循环赛冒烟
