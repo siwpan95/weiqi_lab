@@ -227,14 +227,22 @@ function normalize(row) {
 }
 
 export class PatternPolicy {
-  constructor(radius = 1, moveRadius = 3, backoffMin = 1) {
+  constructor(radius = 1, moveRadius = 3, backoffMin = 1, backoffRadius = 0) {
     this.radius = radius;
     this.moveRadius = moveRadius;
     this.backoffMin = backoffMin; // 主表该上下文样本数 < backoffMin 时退避
-    this.table = new Map(); // 主上下文 -> Map(offset -> count)
-    this.cross = new Map(); // 退避上下文 -> Map(offset -> count)
+    // 退避上下文半径：0 = 用十字邻域（signatureCross，零依赖默认）；
+    // ≥1 = 用同族的 radius 棋形签名（如 主=5×5 / 退避=3×3 的层次化回退）
+    this.backoffRadius = backoffRadius;
+    this.table = new Map(); // 主上下文 -> Map(offset -> count/weight)
+    this.cross = new Map(); // 退避上下文 -> Map(offset -> count/weight)
     this.seen = 0;
-    this.crossSeen = 0;
+  }
+
+  backoffKey(sample, size) {
+    return this.backoffRadius >= 1
+      ? signature(sample, size, this.backoffRadius)
+      : signatureCross(sample, size);
   }
 
   observe(sample, size, next) {
@@ -249,7 +257,7 @@ export class PatternPolicy {
       row.set(k, (row.get(k) || 0) + 1);
     };
     add(this.table, signature(sample, size, this.radius));
-    add(this.cross, signatureCross(sample, size));
+    add(this.cross, this.backoffKey(sample, size));
     this.seen += 1;
     return true;
   }
@@ -261,7 +269,7 @@ export class PatternPolicy {
       const n = Array.from(main.values()).reduce((a, b) => a + b, 0);
       if (n >= this.backoffMin) return { dist: normalize(main), source: "main" };
     }
-    const cross = this.cross.get(signatureCross(sample, size));
+    const cross = this.cross.get(this.backoffKey(sample, size));
     if (cross) return { dist: normalize(cross), source: "cross" };
     return null;
   }
@@ -297,11 +305,11 @@ export class PatternPolicy {
     const c = {};
     for (const [k, row] of this.cross) c[k] = Object.fromEntries(row);
     return { radius: this.radius, moveRadius: this.moveRadius, backoffMin: this.backoffMin,
-      samples: this.seen, table: t, cross: c };
+      backoffRadius: this.backoffRadius, samples: this.seen, table: t, cross: c };
   }
 
   static fromJSON(obj) {
-    const p = new PatternPolicy(obj.radius, obj.moveRadius, obj.backoffMin);
+    const p = new PatternPolicy(obj.radius, obj.moveRadius, obj.backoffMin, obj.backoffRadius || 0);
     for (const [k, row] of Object.entries(obj.table || {})) p.table.set(k, new Map(Object.entries(row)));
     for (const [k, row] of Object.entries(obj.cross || {})) p.cross.set(k, new Map(Object.entries(row)));
     p.seen = obj.samples || 0;

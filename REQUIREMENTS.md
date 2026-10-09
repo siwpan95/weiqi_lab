@@ -92,6 +92,20 @@ TOURNAMENT_PLAYOUTS=60 GAMES_PER_PAIR=1 node run_tournament.mjs
 
 # ⑤ 学习组件（Markov）
 cd tools && MARKOV_GAMES=40 MARKOV_PLAYOUTS=200 node train_markov.mjs
+
+# ⑥ CNN → 零依赖的两条路径（需 ml venv）
+PY=C:\Users\psw\.workbuddy\binaries\python\envs\ml\Scripts\python.exe
+%PY% ml\export_weights.py --cnn ml\cnn-19.npz --out spec\cnn_weights-19.json       # 路径 B：权重导出
+%PY% ml\export_cnn_policy.py --corpus spec\games\human-2026-10-09.jsonl --size 19 --out ml\cnn_policy-19.jsonl
+node tools\distill_to_table.mjs --corpus spec\games\human-2026-10-09.jsonl --policy ml\cnn_policy-19.jsonl `
+     --size 19 --out spec\markov_model-cnn19.json --radius-main 2 --radius-backoff 1   # 路径 A：模式表蒸馏
+node tools\eval_model.mjs --corpus spec\games\human-2026-10-09.jsonl --size 19 --model spec\markov_model-cnn19.json
+%PY% ml\export_logits_probe.py --corpus spec\games\human-2026-10-09.jsonl --size 19 --count 12 --out probe\py.jsonl
+node tools\cnn_forward.mjs --corpus spec\games\human-2026-10-09.jsonl --weights spec\cnn_weights-19.json `
+     --size 19 --count 12 --out probe\js.jsonl      # 两条出口应逐位等价（max|Δlogit| < 1e-3）
+
+# ⑦ 开局方案 A/B（4 组 × 110 局，约 20 分钟）
+bash tournament\run_ab100.sh all                    # 统计写入 tournament/reports/openings-ab100-<date>.md
 ```
 
 ## 5. 构建产物不入库

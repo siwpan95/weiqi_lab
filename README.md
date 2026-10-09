@@ -32,8 +32,8 @@
 | `docs/TIER3_LEARNING.md` | 学习型组件（Markov / CNN）路线与决策请求 |
 | `harness/` | 跨引擎一致性总入口：引擎清单 + JSON-stdio 客户端 + 三项校验 |
 | `tournament/` | 独立裁判层 + 循环赛 runner + 开局库 + 战报（`reports/`） |
-| `tools/` | 共享 I/O 层：`sgf.mjs` `gtp.mjs` `regress.mjs` `markov.mjs` `train_markov.mjs` `import_human.mjs` + `gen_golden.py` |
-| `ml/` | **破例依赖区**（仅 `numpy`）：CNN 策略头 `cnn.py`/`corpus.py`/`train_cnn.py`/`eval_compare.py` + 权重 `cnn-*.npz` |
+| `tools/` | 共享 I/O 层 + 学习组件：`sgf.mjs` `gtp.mjs` `regress.mjs` `markov.mjs` `train_markov.mjs` `import_human.mjs` `distill_to_table.mjs` `eval_model.mjs` `cnn_forward.mjs` + `gen_golden.py` |
+| `ml/` | **破例依赖区**（仅 `numpy`）：CNN 策略头 `cnn.py`/`corpus.py`/`train_cnn.py`/`eval_compare.py` + 权重导出 `export_weights.py`/`export_cnn_policy.py` + 权重 `cnn-*.npz` |
 
 ## 3. 验证状态（2026-10-08 ~ 10-09 实测）
 
@@ -88,11 +88,20 @@
 在此基础上换成 CNN，top-1 再升到 **25.84%**（模式模型的 2.26×）。
 详见 `docs/TIER3_LEARNING.md` 与 `tournament/reports/{markov,cnn}-*.md`。
 
+**零依赖化的两条路径（实测对比）**：① 模式表蒸馏（`tools/distill_to_table.mjs`）——19 路与计数表持平（有损），
+9 路则 4.13% → **7.80%**（1.9×）；② **权重导出 + 纯 JS 前向**（`tools/cnn_forward.mjs`，
+权重 `spec/cnn_weights-*.json` 仅 0.22MB）——与 Python **逐位等价**（max|Δlogit| 3.8e-6），
+**保留完整预测力且运行期零依赖**。工程上取 ②：`OPENINGS=cnn` 即用纯 JS 前向生成开局。
+
 **依赖边界**：破例引入的 `numpy` **仅在 `ml/`**（隔离 venv）；引擎/`tools/`/`harness/`/`tournament/` 仍零依赖。
 人类棋谱**不随仓分发**（`.cache/`、`spec/games/human-*.jsonl` 已 gitignore），按 `docs/RESEARCH.md` §7 的命令 + SHA 可复现。
 
-**Markov 开局已接入循环赛**：`OPENINGS=markov`（默认仍随机；模型缺失自动回退）。
-A/B 实测：开局棋形结构显著不同（连续手间距 1.77 vs 2.80），战果**无显著差异**（样本 20 局/组，见 `openings-ab-*.md`）。
+**Markov/CNN 开局已接入循环赛**：`OPENINGS=markov`（模式表，可用 `MARKOV_MODEL` 指定蒸馏表）或
+`OPENINGS=cnn`（纯 JS CNN 前向）；默认仍随机，模型缺失自动回退。
+**A/B（4 组 × 110 局 = 440 局）**：四组黑胜率 31.8%–49.1%，**经 Bonferroni 校正后无任何稳健差异**
+（最小校正后 p=0.0543），平均手数 111.5–113.1（不影响对局长度）。
+差异全在**棋形结构**：CNN 前向开局仅 **25/110 唯一线**且 74.1% 落 1–2 线（忠实继承弱引擎语料的贴边/重复怪癖），
+两种模式表均为 110/110 唯一。见 `tournament/reports/{openings-ab100,openings-profile}-*.md`。
 
 ## 4. 规则口径
 

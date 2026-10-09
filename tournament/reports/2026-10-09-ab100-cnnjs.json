@@ -1,0 +1,1772 @@
+{
+ "date": "2026-10-09",
+ "suffix": "-ab100-cnnjs",
+ "settings": {
+  "size": 9,
+  "gamesPerPair": 11,
+  "openingPlies": 4,
+  "movesCap": 243,
+  "openingsMode": "cnn",
+  "modelPath": null,
+  "engines": [
+   {
+    "key": "js",
+    "name": "JsWeiqi",
+    "playouts": 80
+   },
+   {
+    "key": "rs",
+    "name": "RustWeiqi",
+    "playouts": 80
+   },
+   {
+    "key": "cpp",
+    "name": "CppWeiqi",
+    "playouts": 80
+   },
+   {
+    "key": "cs",
+    "name": "CsWeiqi",
+    "playouts": 80
+   },
+   {
+    "key": "go",
+    "name": "GoWeiqi",
+    "playouts": 80
+   }
+  ],
+  "filter": [
+   "js",
+   "rs",
+   "cpp",
+   "cs",
+   "go"
+  ]
+ },
+ "games": [
+  {
+   "gno": 1,
+   "black": "js",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+14.5",
+   "moves": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 2,
+   "black": "rs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+10.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 3,
+   "black": "js",
+   "white": "rs",
+   "winner": "js",
+   "result": "B+23.5",
+   "moves": 120,
+   "anomaly": null
+  },
+  {
+   "gno": 4,
+   "black": "rs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+20.5",
+   "moves": 123,
+   "anomaly": null
+  },
+  {
+   "gno": 5,
+   "black": "js",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+20.5",
+   "moves": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 6,
+   "black": "rs",
+   "white": "js",
+   "winner": "rs",
+   "result": "B+3.5",
+   "moves": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 7,
+   "black": "js",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+88.5",
+   "moves": 140,
+   "anomaly": null
+  },
+  {
+   "gno": 8,
+   "black": "rs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+16.5",
+   "moves": 84,
+   "anomaly": null
+  },
+  {
+   "gno": 9,
+   "black": "js",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+8.5",
+   "moves": 110,
+   "anomaly": null
+  },
+  {
+   "gno": 10,
+   "black": "rs",
+   "white": "js",
+   "winner": "rs",
+   "result": "B+17.5",
+   "moves": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 11,
+   "black": "js",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+14.5",
+   "moves": 110,
+   "anomaly": null
+  },
+  {
+   "gno": 12,
+   "black": "js",
+   "white": "cpp",
+   "winner": "js",
+   "result": "B+19.5",
+   "moves": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 13,
+   "black": "cpp",
+   "white": "js",
+   "winner": "js",
+   "result": "W+28.5",
+   "moves": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 14,
+   "black": "js",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+24.5",
+   "moves": 122,
+   "anomaly": null
+  },
+  {
+   "gno": 15,
+   "black": "cpp",
+   "white": "js",
+   "winner": "js",
+   "result": "W+36.5",
+   "moves": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 16,
+   "black": "js",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+4.5",
+   "moves": 122,
+   "anomaly": null
+  },
+  {
+   "gno": 17,
+   "black": "cpp",
+   "white": "js",
+   "winner": "cpp",
+   "result": "B+9.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 18,
+   "black": "js",
+   "white": "cpp",
+   "winner": "js",
+   "result": "B+4.5",
+   "moves": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 19,
+   "black": "cpp",
+   "white": "js",
+   "winner": "js",
+   "result": "W+12.5",
+   "moves": 108,
+   "anomaly": null
+  },
+  {
+   "gno": 20,
+   "black": "js",
+   "white": "cpp",
+   "winner": "js",
+   "result": "B+19.5",
+   "moves": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 21,
+   "black": "cpp",
+   "white": "js",
+   "winner": "js",
+   "result": "W+18.5",
+   "moves": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 22,
+   "black": "js",
+   "white": "cpp",
+   "winner": "js",
+   "result": "B+7.5",
+   "moves": 99,
+   "anomaly": null
+  },
+  {
+   "gno": 23,
+   "black": "js",
+   "white": "cs",
+   "winner": "js",
+   "result": "B+31.5",
+   "moves": 136,
+   "anomaly": null
+  },
+  {
+   "gno": 24,
+   "black": "cs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+32.5",
+   "moves": 102,
+   "anomaly": null
+  },
+  {
+   "gno": 25,
+   "black": "js",
+   "white": "cs",
+   "winner": "js",
+   "result": "B+13.5",
+   "moves": 118,
+   "anomaly": null
+  },
+  {
+   "gno": 26,
+   "black": "cs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+48.5",
+   "moves": 143,
+   "anomaly": null
+  },
+  {
+   "gno": 27,
+   "black": "js",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+88.5",
+   "moves": 146,
+   "anomaly": null
+  },
+  {
+   "gno": 28,
+   "black": "cs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+14.5",
+   "moves": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 29,
+   "black": "js",
+   "white": "cs",
+   "winner": "js",
+   "result": "B+23.5",
+   "moves": 122,
+   "anomaly": null
+  },
+  {
+   "gno": 30,
+   "black": "cs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+14.5",
+   "moves": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 31,
+   "black": "js",
+   "white": "cs",
+   "winner": "js",
+   "result": "B+1.5",
+   "moves": 121,
+   "anomaly": null
+  },
+  {
+   "gno": 32,
+   "black": "cs",
+   "white": "js",
+   "winner": "js",
+   "result": "W+6.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 33,
+   "black": "js",
+   "white": "cs",
+   "winner": "js",
+   "result": "B+17.5",
+   "moves": 134,
+   "anomaly": null
+  },
+  {
+   "gno": 34,
+   "black": "js",
+   "white": "go",
+   "winner": "go",
+   "result": "W+6.5",
+   "moves": 98,
+   "anomaly": null
+  },
+  {
+   "gno": 35,
+   "black": "go",
+   "white": "js",
+   "winner": "js",
+   "result": "W+10.5",
+   "moves": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 36,
+   "black": "js",
+   "white": "go",
+   "winner": "js",
+   "result": "B+15.5",
+   "moves": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 37,
+   "black": "go",
+   "white": "js",
+   "winner": "js",
+   "result": "W+24.5",
+   "moves": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 38,
+   "black": "js",
+   "white": "go",
+   "winner": "go",
+   "result": "W+8.5",
+   "moves": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 39,
+   "black": "go",
+   "white": "js",
+   "winner": "go",
+   "result": "B+13.5",
+   "moves": 95,
+   "anomaly": null
+  },
+  {
+   "gno": 40,
+   "black": "js",
+   "white": "go",
+   "winner": "go",
+   "result": "W+18.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 41,
+   "black": "go",
+   "white": "js",
+   "winner": "js",
+   "result": "W+26.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 42,
+   "black": "js",
+   "white": "go",
+   "winner": "go",
+   "result": "W+16.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 43,
+   "black": "go",
+   "white": "js",
+   "winner": "go",
+   "result": "B+21.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 44,
+   "black": "js",
+   "white": "go",
+   "winner": "js",
+   "result": "B+35.5",
+   "moves": 124,
+   "anomaly": null
+  },
+  {
+   "gno": 45,
+   "black": "rs",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+15.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 46,
+   "black": "cpp",
+   "white": "rs",
+   "winner": "cpp",
+   "result": "B+5.5",
+   "moves": 96,
+   "anomaly": null
+  },
+  {
+   "gno": 47,
+   "black": "rs",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+0.5",
+   "moves": 99,
+   "anomaly": null
+  },
+  {
+   "gno": 48,
+   "black": "cpp",
+   "white": "rs",
+   "winner": "cpp",
+   "result": "B+1.5",
+   "moves": 122,
+   "anomaly": null
+  },
+  {
+   "gno": 49,
+   "black": "rs",
+   "white": "cpp",
+   "winner": "rs",
+   "result": "B+11.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 50,
+   "black": "cpp",
+   "white": "rs",
+   "winner": "cpp",
+   "result": "B+1.5",
+   "moves": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 51,
+   "black": "rs",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+8.5",
+   "moves": 100,
+   "anomaly": null
+  },
+  {
+   "gno": 52,
+   "black": "cpp",
+   "white": "rs",
+   "winner": "cpp",
+   "result": "B+3.5",
+   "moves": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 53,
+   "black": "rs",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+8.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 54,
+   "black": "cpp",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+8.5",
+   "moves": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 55,
+   "black": "rs",
+   "white": "cpp",
+   "winner": "rs",
+   "result": "B+11.5",
+   "moves": 104,
+   "anomaly": null
+  },
+  {
+   "gno": 56,
+   "black": "rs",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+12.5",
+   "moves": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 57,
+   "black": "cs",
+   "white": "rs",
+   "winner": "cs",
+   "result": "B+18.5",
+   "moves": 104,
+   "anomaly": null
+  },
+  {
+   "gno": 58,
+   "black": "rs",
+   "white": "cs",
+   "winner": "rs",
+   "result": "B+21.5",
+   "moves": 121,
+   "anomaly": null
+  },
+  {
+   "gno": 59,
+   "black": "cs",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+11.5",
+   "moves": 97,
+   "anomaly": null
+  },
+  {
+   "gno": 60,
+   "black": "rs",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+43.5",
+   "moves": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 61,
+   "black": "cs",
+   "white": "rs",
+   "winner": "cs",
+   "result": "B+1.5",
+   "moves": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 62,
+   "black": "rs",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+4.5",
+   "moves": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 63,
+   "black": "cs",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+22.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 64,
+   "black": "rs",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+28.5",
+   "moves": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 65,
+   "black": "cs",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+30.5",
+   "moves": 128,
+   "anomaly": null
+  },
+  {
+   "gno": 66,
+   "black": "rs",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+9.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 67,
+   "black": "rs",
+   "white": "go",
+   "winner": "rs",
+   "result": "B+9.5",
+   "moves": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 68,
+   "black": "go",
+   "white": "rs",
+   "winner": "go",
+   "result": "B+9.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 69,
+   "black": "rs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+4.5",
+   "moves": 93,
+   "anomaly": null
+  },
+  {
+   "gno": 70,
+   "black": "go",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+10.5",
+   "moves": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 71,
+   "black": "rs",
+   "white": "go",
+   "winner": "rs",
+   "result": "B+7.5",
+   "moves": 135,
+   "anomaly": null
+  },
+  {
+   "gno": 72,
+   "black": "go",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+10.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 73,
+   "black": "rs",
+   "white": "go",
+   "winner": "rs",
+   "result": "B+35.5",
+   "moves": 127,
+   "anomaly": null
+  },
+  {
+   "gno": 74,
+   "black": "go",
+   "white": "rs",
+   "winner": "go",
+   "result": "B+17.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 75,
+   "black": "rs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+4.5",
+   "moves": 128,
+   "anomaly": null
+  },
+  {
+   "gno": 76,
+   "black": "go",
+   "white": "rs",
+   "winner": "rs",
+   "result": "W+16.5",
+   "moves": 104,
+   "anomaly": null
+  },
+  {
+   "gno": 77,
+   "black": "rs",
+   "white": "go",
+   "winner": "rs",
+   "result": "B+25.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 78,
+   "black": "cpp",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+16.5",
+   "moves": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 79,
+   "black": "cs",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+19.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 80,
+   "black": "cpp",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+6.5",
+   "moves": 103,
+   "anomaly": null
+  },
+  {
+   "gno": 81,
+   "black": "cs",
+   "white": "cpp",
+   "winner": "cs",
+   "result": "B+23.5",
+   "moves": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 82,
+   "black": "cpp",
+   "white": "cs",
+   "winner": "cpp",
+   "result": "B+11.5",
+   "moves": 116,
+   "anomaly": null
+  },
+  {
+   "gno": 83,
+   "black": "cs",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+6.5",
+   "moves": 98,
+   "anomaly": null
+  },
+  {
+   "gno": 84,
+   "black": "cpp",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+32.5",
+   "moves": 131,
+   "anomaly": null
+  },
+  {
+   "gno": 85,
+   "black": "cs",
+   "white": "cpp",
+   "winner": "cs",
+   "result": "B+15.5",
+   "moves": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 86,
+   "black": "cpp",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+8.5",
+   "moves": 109,
+   "anomaly": null
+  },
+  {
+   "gno": 87,
+   "black": "cs",
+   "white": "cpp",
+   "winner": "cs",
+   "result": "B+33.5",
+   "moves": 105,
+   "anomaly": null
+  },
+  {
+   "gno": 88,
+   "black": "cpp",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+16.5",
+   "moves": 110,
+   "anomaly": null
+  },
+  {
+   "gno": 89,
+   "black": "cpp",
+   "white": "go",
+   "winner": "go",
+   "result": "W+16.5",
+   "moves": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 90,
+   "black": "go",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+8.5",
+   "moves": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 91,
+   "black": "cpp",
+   "white": "go",
+   "winner": "go",
+   "result": "W+20.5",
+   "moves": 111,
+   "anomaly": null
+  },
+  {
+   "gno": 92,
+   "black": "go",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+52.5",
+   "moves": 148,
+   "anomaly": null
+  },
+  {
+   "gno": 93,
+   "black": "cpp",
+   "white": "go",
+   "winner": "go",
+   "result": "W+30.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 94,
+   "black": "go",
+   "white": "cpp",
+   "winner": "go",
+   "result": "B+33.5",
+   "moves": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 95,
+   "black": "cpp",
+   "white": "go",
+   "winner": "cpp",
+   "result": "B+0.5",
+   "moves": 107,
+   "anomaly": null
+  },
+  {
+   "gno": 96,
+   "black": "go",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+2.5",
+   "moves": 106,
+   "anomaly": null
+  },
+  {
+   "gno": 97,
+   "black": "cpp",
+   "white": "go",
+   "winner": "cpp",
+   "result": "B+23.5",
+   "moves": 117,
+   "anomaly": null
+  },
+  {
+   "gno": 98,
+   "black": "go",
+   "white": "cpp",
+   "winner": "cpp",
+   "result": "W+32.5",
+   "moves": 130,
+   "anomaly": null
+  },
+  {
+   "gno": 99,
+   "black": "cpp",
+   "white": "go",
+   "winner": "go",
+   "result": "W+10.5",
+   "moves": 137,
+   "anomaly": null
+  },
+  {
+   "gno": 100,
+   "black": "cs",
+   "white": "go",
+   "winner": "cs",
+   "result": "B+5.5",
+   "moves": 104,
+   "anomaly": null
+  },
+  {
+   "gno": 101,
+   "black": "go",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+30.5",
+   "moves": 119,
+   "anomaly": null
+  },
+  {
+   "gno": 102,
+   "black": "cs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+34.5",
+   "moves": 133,
+   "anomaly": null
+  },
+  {
+   "gno": 103,
+   "black": "go",
+   "white": "cs",
+   "winner": "go",
+   "result": "B+9.5",
+   "moves": 113,
+   "anomaly": null
+  },
+  {
+   "gno": 104,
+   "black": "cs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+22.5",
+   "moves": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 105,
+   "black": "go",
+   "white": "cs",
+   "winner": "go",
+   "result": "B+1.5",
+   "moves": 94,
+   "anomaly": null
+  },
+  {
+   "gno": 106,
+   "black": "cs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+70.5",
+   "moves": 136,
+   "anomaly": null
+  },
+  {
+   "gno": 107,
+   "black": "go",
+   "white": "cs",
+   "winner": "go",
+   "result": "B+37.5",
+   "moves": 115,
+   "anomaly": null
+  },
+  {
+   "gno": 108,
+   "black": "cs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+14.5",
+   "moves": 112,
+   "anomaly": null
+  },
+  {
+   "gno": 109,
+   "black": "go",
+   "white": "cs",
+   "winner": "cs",
+   "result": "W+38.5",
+   "moves": 114,
+   "anomaly": null
+  },
+  {
+   "gno": 110,
+   "black": "cs",
+   "white": "go",
+   "winner": "go",
+   "result": "W+7.5",
+   "moves": 97,
+   "anomaly": null
+  }
+ ],
+ "stats": {
+  "js": {
+   "key": "js",
+   "name": "JsWeiqi",
+   "wins": 17,
+   "losses": 27,
+   "draws": 0,
+   "moves": 2352,
+   "visits": 33518,
+   "winrate": 1481.8388712602386,
+   "illegal": 0,
+   "timeout": 0,
+   "crash": 0,
+   "genmoves": 2411
+  },
+  "rs": {
+   "key": "rs",
+   "name": "RustWeiqi",
+   "wins": 23,
+   "losses": 21,
+   "draws": 0,
+   "moves": 2303,
+   "visits": 32423,
+   "winrate": 1491.8701542521528,
+   "illegal": 0,
+   "timeout": 0,
+   "crash": 0,
+   "genmoves": 2364
+  },
+  "cpp": {
+   "key": "cpp",
+   "name": "CppWeiqi",
+   "wins": 18,
+   "losses": 26,
+   "draws": 0,
+   "moves": 2319,
+   "visits": 34128,
+   "winrate": 1565.498668014153,
+   "illegal": 0,
+   "timeout": 0,
+   "crash": 0,
+   "genmoves": 2380
+  },
+  "cs": {
+   "key": "cs",
+   "name": "CsWeiqi",
+   "wins": 25,
+   "losses": 19,
+   "draws": 0,
+   "moves": 2347,
+   "visits": 34558,
+   "winrate": 1555.8383568257818,
+   "illegal": 0,
+   "timeout": 0,
+   "crash": 0,
+   "genmoves": 2428
+  },
+  "go": {
+   "key": "go",
+   "name": "GoWeiqi",
+   "wins": 27,
+   "losses": 17,
+   "draws": 0,
+   "moves": 2338,
+   "visits": 34355,
+   "winrate": 1599.9974110339153,
+   "illegal": 0,
+   "timeout": 0,
+   "crash": 0,
+   "genmoves": 2408
+  }
+ },
+ "divergence": [
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F6",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "F2",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "E5",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "G2",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "A7",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "A5",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "G1",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "G4",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F5",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "D1",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F1",
+   "visits": 10
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "B5",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "A7",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "D2",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "H1",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "C9",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "J7",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "C8",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "B6",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "H6",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "H3",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F4",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "B6",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "D6",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F4",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "F9",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "C9",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "B4",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "C9",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "F1",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "J2",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "A9",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "C1",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F5",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "A8",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F7",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "G7",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "F4",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "A6",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "C8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "B7",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "A2",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "J5",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "js",
+   "vertex": "J7",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "D1",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "G9",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "F7",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "A6",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "C1",
+   "visits": 11
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "H1",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "H5",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "B2",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "J1",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "E8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "A6",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "G6",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "A3",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "A2",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "G2",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "B3",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "B7",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "F3",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "B6",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "A1",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "C9",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "A2",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "J6",
+   "visits": 10
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "A5",
+   "visits": 10
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "J5",
+   "visits": 12
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "F8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "E8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "H6",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "E5",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "A8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "E2",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "J8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "rs",
+   "vertex": "C7",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "B9",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "D7",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "D7",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "E2",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "B7",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "F6",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "G6",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "F6",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "A3",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "C1",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "J8",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "A9",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "E4",
+   "visits": 10
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "F5",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "F4",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "E4",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "H9",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "C4",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "F7",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "E3",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "E1",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "cpp",
+   "vertex": "F5",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "J2",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "F9",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "H8",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "H1",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "G7",
+   "visits": 7
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "D5",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "D1",
+   "visits": 8
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "A8",
+   "visits": 6
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "J7",
+   "visits": 9
+  },
+  {
+   "ply": 4,
+   "engine": "go",
+   "vertex": "A5",
+   "visits": 5
+  },
+  {
+   "ply": 4,
+   "engine": "cs",
+   "vertex": "B9",
+   "visits": 8
+  }
+ ]
+}

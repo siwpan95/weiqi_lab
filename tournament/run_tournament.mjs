@@ -100,6 +100,27 @@ async function main() {
   fs.writeFileSync(file, report, "utf8");
   console.log(`\n战报已写入: ${file}`);
 
+  // ---------- 机读记录（供 A/B 统计；不参与展示）----------
+  const jsonPath = path.join(dir, `${today()}${REPORT_SUFFIX}.json`);
+  fs.writeFileSync(jsonPath, JSON.stringify({
+    date: today(), suffix: REPORT_SUFFIX || "",
+    settings: {
+      size: SIZE, gamesPerPair: GAMES_PER_PAIR, openingPlies: OPENING_PLIES,
+      movesCap: MOVES_CAP, openingsMode: (process.env.OPENINGS || "random"),
+      modelPath: (process.env.OPENINGS || "").toLowerCase() === "markov"
+        ? (process.env.MARKOV_MODEL || "spec/markov_model.json") : null,
+      engines: specs.map((s) => ({ key: s.key, name: s.name, playouts: budgets.get(s.key) })),
+      filter: FILTER,
+    },
+    games: games.map((g) => ({
+      gno: g.gno, black: g.black, white: g.white, winner: g.winner,
+      result: g.result, moves: g.moves, anomaly: g.anomaly || null,
+    })),
+    stats: Object.fromEntries([...stats.entries()].map(([k, v]) => [k, { ...v }])),
+    divergence,
+  }, null, 1) + "\n", "utf8");
+  console.log(`机读记录: ${jsonPath}`);
+
   // ---------- 交叉表摘要 ----------
   console.log("\n交叉表（行=黑胜/白胜合并计入胜负）:");
   const keys = specs.map((s) => s.key);

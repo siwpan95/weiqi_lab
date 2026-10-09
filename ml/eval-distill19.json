@@ -1,0 +1,40 @@
+{
+ "model": "spec/markov_model-cnn19.json",
+ "corpus": "spec/games/human-2026-10-09.jsonl",
+ "size": 19,
+ "games": 6000,
+ "valGames": 1200,
+ "plies": 249885,
+ "coverage": 0.9998399263661284,
+ "top1": 0.0732574196001521,
+ "top3": 0.21754687906502032,
+ "uniform": 0.004260945084459986,
+ "viaMain": 76818,
+ "viaCross": 173027,
+ "modelMeta": {
+  "spec": "markov-v1-distilled",
+  "source": {
+   "kind": "cnn-distill",
+   "teacher": "ml/cnn-19.npz",
+   "policy": "ml/cnn_policy-19.jsonl",
+   "corpus": "spec/games/human-2026-10-09.jsonl",
+   "note": "teacher 为 numpy 小型策略 CNN；本表为按其策略在语料上聚合的零依赖查表近似"
+  },
+  "distill": {
+   "tag": "cnn19",
+   "positions": 300000,
+   "skipped": 0,
+   "policyRows": 300000,
+   "radiusMain": 2,
+   "radiusBackoff": 1,
+   "minMain": 5,
+   "topOffsets": 12,
+   "contextsRaw": 98519,
+   "droppedCtx": 95690,
+   "contexts": 2829,
+   "entries": 33369,
+   "crossContexts": 996,
+   "crossEntries": 38392
+  }
+ }
+}

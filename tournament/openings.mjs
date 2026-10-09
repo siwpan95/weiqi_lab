@@ -13,9 +13,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Ref } from "./referee.mjs";
 import { PatternPolicy } from "../tools/markov.mjs";
+import { CnnPolicy } from "../tools/cnn_forward.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MODEL_PATH = path.resolve(__dirname, "..", "spec", "markov_model.json");
+// 模式表模型路径（OPENINGS=markov 使用；可用 MARKOV_MODEL 指定，例如蒸馏表）
+const MODEL_PATH = process.env.MARKOV_MODEL
+  ? path.resolve(process.env.MARKOV_MODEL)
+  : path.resolve(__dirname, "..", "spec", "markov_model.json");
 
 const COLS = "ABCDEFGHJKLMNOPQRST";
 
@@ -158,6 +162,75 @@ export function markovOpeningLine(size, plies, seed) {
   return line;
 }
 
+// ---------------------------------------------------------------- CNN 开局（纯 JS 前向）
+// 与 markov 模式同构，但着法来自 **CNN 策略头的纯 JS 前向**（tools/cnn_forward.mjs，运行期零依赖：
+// 只读 spec/cnn_weights-<size>.json）。用途：A/B 中代表"未蒸馏、保留完整预测力"的 CNN 开局。
+let _cnn = null;
+let _cnnError = null;
+const CNN_TOPK = Number(process.env.CNN_OPENING_TOPK || 8);
+
+export function loadCnn(size) {
+  if (_cnn) return _cnn;
+  if (_cnnError) throw _cnnError;
+  try {
+    const p = process.env.CNN_WEIGHTS
+      ? path.resolve(process.env.CNN_WEIGHTS)
+      : path.resolve(__dirname, "..", "spec", `cnn_weights-${size}.json`);
+    _cnn = CnnPolicy.load(p);
+    if (_cnn.size !== size) throw new Error(`权重尺寸 ${_cnn.size} ≠ 棋盘 ${size}`);
+    return _cnn;
+  } catch (e) {
+    _cnnError = new Error(`CNN 权重不可用: ${e.message}`);
+    throw _cnnError;
+  }
+}
+
+/** CNN 开局线：首手中央区随机（与其他模式一致），其后按 CNN top-K 分布采样，Ref 校验合法性 */
+export function cnnOpeningLine(size, plies, seed) {
+  const net = loadCnn(size);
+  const rnd = makeRng(seed);
+  if (plies <= 0) return [];
+  const ref = new Ref(size, null, "cn");
+  const line = [];
+  const placedPts = [];
+  const zone = centralZone(size);
+  const first = zone[Math.floor(rnd() * zone.length) % zone.length];
+  if (!ref.legal(1, first.idx).legal) return randomOpeningLine(size, plies, seed);
+  ref.play(1, first.idx);
+  placedPts.push({ x: first.x, y: first.y });
+  line.push({ color: "B", vertex: vertexOf(first.idx, size) });
+
+  let last = first.idx;
+  for (let p = 1; p < plies; p++) {
+    const side = ref.side;
+    let chosen = -1;
+    const top = net.topK(ref.cells, side, last, CNN_TOPK);
+    // 按概率采样；若被占/不合法则按概率顺序尝试下一个
+    let r = rnd();
+    let acc = 0;
+    const order = [];
+    for (const t of top) {
+      acc += t.p;
+      order.push(t.vertex);
+      if (r <= acc) break;
+    }
+    if (!order.length) order.push(...top.map((t) => t.vertex));
+    for (const cand of order) {
+      if (ref.legal(side, cand).legal) {
+        chosen = cand;
+        break;
+      }
+    }
+    if (chosen < 0) chosen = randomFallbackLegal(size, ref, placedPts, rnd);
+    if (chosen < 0) break;
+    ref.play(side, chosen);
+    placedPts.push({ x: chosen % size, y: Math.floor(chosen / size) });
+    line.push({ color: side === 1 ? "B" : "W", vertex: vertexOf(chosen, size) });
+    last = chosen;
+  }
+  return line;
+}
+
 // ---------------------------------------------------------------- 模式分派
 const _logged = new Set();
 function logOnce(key, fn) {
@@ -172,6 +245,17 @@ function logOnce(key, fn) {
  */
 export function openingLine(size, plies, seed) {
   const mode = (process.env.OPENINGS || "").trim().toLowerCase();
+  if (mode === "cnn") {
+    try {
+      const net = loadCnn(size);
+      logOnce("cnn", () => console.info(
+        `[openings] OPENINGS=cnn → 使用 CNN 策略前向（纯 JS，ch1=${net.ch1} ch2=${net.ch2}）`));
+      return cnnOpeningLine(size, plies, seed);
+    } catch (e) {
+      logOnce("cnn-fail", () => console.warn(`[openings] OPENINGS=cnn 但权重不可用 → 回退随机开局：${e.message}`));
+      return randomOpeningLine(size, plies, seed);
+    }
+  }
   if (mode === "markov") {
     try {
       const line = markovOpeningLine(size, plies, seed);
@@ -188,7 +272,7 @@ export function openingLine(size, plies, seed) {
     logOnce("bad-mode", () => console.warn(`[openings] OPENINGS=${mode} 未识别 → 使用随机开局（默认）`));
   } else {
     logOnce("random", () => console.log(
-      "[openings] 使用随机开局（默认；设 OPENINGS=markov 启用 Markov 模型）"));
+      "[openings] 使用随机开局（默认；OPENINGS=markov 用模式表，OPENINGS=cnn 用 CNN 前向）"));
   }
   return randomOpeningLine(size, plies, seed);
 }
