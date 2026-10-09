@@ -431,6 +431,11 @@ export const DEFAULT_PROFILE = {
   lib2: 0,                  // >0：以该概率采用"2 气棋块的好气点位"（Fuego playout 分层；1 = 总是）
   // ---- LGR（Last-Good-Reply，可选；默认 0 = 关闭）----
   lgr: 0,                   // >0：playout 中优先复用"上次应对这一手的着法"（Fuego/Baier-Drake 风格）
+  // ---- 真 AMAF（可选；默认 0 = 关闭）----
+  // ⚠️ 现状（0）：RAVE 的 AMAF 集合**只统计树下降阶段的着法**，不统计 playout 里的随机着法。
+  //    对根节点的子节点可证明 amafN≡N 且 amafW/amafN≡W/N → **RAVE 在根层完全退化为恒等（no-op）**。
+  //    >0：把 playout 中落下的每个子也记入 AMAF 集合（经典 AMAF 语义），RAVE 才真正生效。
+  amaf_full: 0,
   // ---- 模式表 playout 偏置（可选；默认 0 = 关闭）----
   pbias: 0.0,               // >0：playout 候选按 w=(1-pbias)+pbias·n·P_model(偏移) 加权（0 = 均匀，原行为）
   pbias_model: null,        // 表路径；null = spec/markov_model-<size>.json（缺失/不可用 → 自动禁用）
@@ -997,6 +1002,8 @@ function playout(pb, rng, pr, max_moves, opts = null) {
   const pbScratch = pbOn
     ? ((opts && opts.scratch) ? opts.scratch : new Float64Array(pb.n2))
     : null;
+  // 真 AMAF（amaf_full）：把 playout 中落下的着法记入 AMAF 集合（经典语义）
+  const amafS = opts && opts.amaf ? (pb.side === 1 ? opts.amaf.s1 : opts.amaf.s2) : null;
   let moves = 0;
   let mPrev = -1; // LGR：本 playout 内"最后一手之前的那一手"（-1 = 未知 / 上一手为过手）
   while (pb.passes < 2 && moves < max_moves) {
@@ -1078,6 +1085,7 @@ function playout(pb, rng, pr, max_moves, opts = null) {
       if (lgrMove >= 0 && urgent.length === 0) {
         // 局部无候选但 LGR 有效应手 → 走应手而不是过手（真正的终局才过手）
         pb.apply(color, lgrMove);
+        if (opts && opts.amaf) { (color === 1 ? opts.amaf.s1 : opts.amaf.s2)[lgrMove] = opts.amaf.mark; }
         moves += 1;
         mPrev = last;
         continue;
@@ -1133,6 +1141,7 @@ function playout(pb, rng, pr, max_moves, opts = null) {
       m = cands[rng.randint(cands.length)];
     }
     pb.apply(color, m);
+    if (opts && opts.amaf) { (color === 1 ? opts.amaf.s1 : opts.amaf.s2)[m] = opts.amaf.mark; }
     moves += 1;
     if (lgrOn) {
       // 记录"这一情境下的应手"（last-writer-wins；下一次再遇到同一 (mPrev, last) 即复用）
@@ -1237,7 +1246,8 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
       console.warn(`[ai] pbias=${pbW} 但模式表不可用 → 已按原 playout 运行：${_pbTabFail}`);
     }
   }
-  const plOpts = (lgrTab || pbTab)
+  const amafFull = Math.trunc(Number(pr["amaf_full"]) || 0) > 0;
+  const plOpts = (lgrTab || pbTab || amafFull)
     ? { lgr: lgrTab, tab: pbTab, w: pbW, scratch: pbTab ? new Float64Array(n2) : null }
     : null;
   let root = new Node(PASS_MOVE, board.side);
@@ -1293,11 +1303,13 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
   // RAVE 的"本次迭代下过哪些手"用代际标记数组（零分配；替代每迭代 new Set()×2）
   const simStamp1 = new Int32Array(n2);
   const simStamp2 = new Int32Array(n2);
+  if (amafFull) plOpts.amaf = { s1: simStamp1, s2: simStamp2, mark: 0 };
   for (let it = 0; it < iters; it++) {
     let pb = pb0.clone();
     let node = root;
     const chain = [root];
     const itMark = it + 1; // 每次迭代唯一
+    if (amafFull) plOpts.amaf.mark = itMark;
     let cnt1 = 0;
     let cnt2 = 0;
     while (node.expanded && node.children.size > 0) {
