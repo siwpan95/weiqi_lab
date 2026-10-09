@@ -10,7 +10,7 @@
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| **本批本地提交推送远程** | ⏳ 待建仓推送 | 本批累计本地提交待建独立仓（`gitee.com/siwpan`）；铁律 3：推送需在场放行，推后 `git ls-remote` 核对 IN_SYNC |
+| **本批本地提交推送远程** | ✅ 已建仓推送 | `gitee.com/siwpan/weiqi_lab`（public, MIT）；master 已推，`git ls-remote` 核对 IN_SYNC（本地=远程=`f048d67`） |
 | **建仓三件套核对** | ✅ 已核 | `README.md` / `LICENSE`（MIT）/ `.gitignore` 均齐备；默认 **公开 + MIT**（铁律 0） |
 | **人类棋谱不分发** | ✅ 已落实 | `PGD` 语料 `.cache/` 与 `spec/games/human-*.jsonl` 均 gitignore，只入库导入脚本 + 哈希（`docs/RESEARCH.md` §7） |
 
