@@ -33,7 +33,7 @@
   - 实现：`tools/scoring.mjs`（纯函数死子检测 + 含死子面积法）、`tournament/referee.mjs::scoreAuto()`（终局计分自动移除死子）、`JsWeiqi/ai.mjs` 叶子估值 `dead_stones` 开关（默认 0，行为逐位不变）。
   - A/B（`ab-profile-2026-10-09-deadstone-300`，9 路 · 150 pl · 300 局）：**A(无死子) 143 : B(死子) 157，p=0.2530 → 中性**（点估计 +2.3pp 但不显著，Bonferroni 下更弱）。
   - 结论：死子判定作**叶子估值增强**不带来显著强度提升；但其**终局计分**语义（`scoreAuto`）仍修正"盘上皆活"，作为自对弈语料的干净终局标签保留。引擎 `dead_stones` 维持默认 0。
-- **Track B — 价值头（代码 + 训练已落地；B5 A/B 进行中）**
+- **Track B — 价值头（代码 + 训练 + B5 A/B 已落地；结论：中性）**
   - 实现：`ml/cnn.py` 加 `Wv/bv` 参数 + `forwardV` / `backward(...,dvalue)` / `value_mse` + `load` 旧权重回退；`ml/export_weights.py` 导出 `has_value` 旗标与 `Wv/bv`；`tools/cnn_forward.mjs::valueFrom`（全局均值池化→线性→sigmoid，与 Python 严格对拍通过）；`JsWeiqi/ai.mjs` 叶子估值 `cnn_value` 融合开关（默认 0，行为逐位不变）。
   - 数值自检：合成价值头网络 JS↔Python 对拍 `value` |d|=2.7e-8、`forwardOne` 重构后最大 |d|=2.4e-7；`tests.mjs` 加 3 个价值头单测（含 `hasValue=false→0.5`、退化 `sigmoid` 确定性）。
   - 训练（`ml/train_value.py`，纯 numpy + 自研 Adam，零依赖）：语料 `corpus-2026-10-09.jsonl`+`corpus-2026-10-09-cpp5k.jsonl`（92 局，平衡后）以 cnn-9 初始化 + `--balance --tail 20 --finetune-conv --steps 300 --batch 256 --lr 5e-3` → **val_acc 76.58%**、val_mse 0.0874、黑胜局均 val 0.655 / 白胜局均 0.190（分离清晰）、train_acc 95.41%。产物 `ml/cnn-9-value.npz`(+curve) 与导出 `spec/cnn_weights-9-vh.json`（11074 参数，has_value=True）。
