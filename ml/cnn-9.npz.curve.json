@@ -1,0 +1,92 @@
+{
+ "meta": {
+  "size": 9,
+  "corpus": "spec/games/corpus-2026-10-09.jsonl",
+  "steps": 800,
+  "batch": 64,
+  "channels": 32,
+  "lr": 0.002,
+  "seed": 0,
+  "val_frac": 0.2,
+  "train_samples": 5246,
+  "val_samples": 1308,
+  "cut_game": 48,
+  "num_games": 60,
+  "max_games": null,
+  "max_positions": null,
+  "final_train_loss": 2.8084,
+  "val_top1": 0.1758,
+  "val_top3": 0.3876,
+  "uniform_top1": 0.0471,
+  "elapsed_s": 83.4,
+  "sources": [
+   "spec/games/corpus-2026-10-09.jsonl"
+  ]
+ },
+ "curve": [
+  {
+   "step": 100,
+   "train_loss": 3.0639,
+   "batch_top1": 0.0781,
+   "val_top1": 0.1009,
+   "val_top3": 0.2538,
+   "elapsed_s": 11.3
+  },
+  {
+   "step": 200,
+   "train_loss": 3.0703,
+   "batch_top1": 0.0781,
+   "val_top1": 0.1216,
+   "val_top3": 0.3112,
+   "elapsed_s": 22.3
+  },
+  {
+   "step": 300,
+   "train_loss": 2.7193,
+   "batch_top1": 0.2188,
+   "val_top1": 0.1476,
+   "val_top3": 0.3547,
+   "elapsed_s": 32.1
+  },
+  {
+   "step": 400,
+   "train_loss": 3.0212,
+   "batch_top1": 0.0938,
+   "val_top1": 0.1651,
+   "val_top3": 0.3746,
+   "elapsed_s": 43.4
+  },
+  {
+   "step": 500,
+   "train_loss": 2.5702,
+   "batch_top1": 0.2812,
+   "val_top1": 0.1606,
+   "val_top3": 0.3983,
+   "elapsed_s": 52.4
+  },
+  {
+   "step": 600,
+   "train_loss": 2.5211,
+   "batch_top1": 0.25,
+   "val_top1": 0.1667,
+   "val_top3": 0.3846,
+   "elapsed_s": 64.3
+  },
+  {
+   "step": 700,
+   "train_loss": 2.6914,
+   "batch_top1": 0.2812,
+   "val_top1": 0.1728,
+   "val_top3": 0.393,
+   "elapsed_s": 74.7
+  },
+  {
+   "step": 800,
+   "train_loss": 2.8084,
+   "batch_top1": 0.1562,
+   "val_top1": 0.1758,
+   "val_top3": 0.3876,
+   "elapsed_s": 83.4
+  }
+ ]
+}

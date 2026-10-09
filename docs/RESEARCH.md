@@ -105,7 +105,22 @@
 > 说明：`zhuangtaiji` 为同一作者的既有项目，许可证一致（MIT），无许可冲突；
 > 本次仅借用**结构与算法思路**，未复制其 Python 代码；`tools/markov.mjs` 中的围棋专用层为本项目原创。
 
-## 7. 未决/裁剪项（诚实记录）
+## 7. Tier 3 语料来源（人体棋谱，2026-10-09 第二轮）
+
+| 项 | 内容 |
+|---|---|
+| 数据集 | **Professional Go Dataset（PGD）** —— 职业棋谱库（98k 局量级），镜像仓 `https://github.com/wangjinzhuo/pgd` |
+| 获取方式 | `curl -sL -o .cache/human/pgd.tar.gz https://codeload.github.com/wangjinzhuo/pgd/tar.gz/refs/heads/master`（104 MB） |
+| 归档 SHA-256 | `4fcb8ef2344669689e2d58669232241eac82f8730c217feadabaf258f645d7fe` |
+| 导入方式 | `node tools/import_human.mjs .cache/human/pgd.tar.gz --max 6000 --size 19` → `spec/games/human-<date>.jsonl`（6000 局 / 120 万手；丢弃：让子 2035、过短 434、非 SGF 1896） |
+| **许可证 / 分发** | 该仓**未声明许可证**。棋谱本身属"事实性记录"，但为稳妥起见：**本仓不分发原始归档，也不分发派生语料**（`.cache/` 与 `spec/games/human-*.jsonl` 均已 gitignore），仅入库**导入脚本 + 本记账 + 哈希**，任何人可按上述命令复现。仅用于本地研究/评测。 |
+| 用途 | T3-A（语料质量）与 T3-C（CNN）的训练/留出评测；**不参与**循环赛对局 |
+
+> 导入器有一次**真实缺陷**记录：初版 tar 读取器把 typeflag `0x30`（`'0'`，常规文件）误判为目录跳过
+> → 导入 0 局（`notSgf=982987`）。已修正为"仅跳过非 `'0'`/`'\0'` 项"，并在 `tools/import_human.mjs` 内注释留痕。
+> 教训：**自研二进制格式解析器必须用真实样本做端到端断言**，不能只在"文件存在"层面验证。
+
+## 8. 未决/裁剪项（诚实记录）
 
 1. **SGF 读写**：M1 不实现（局面用 `golden.json` 承载）；未来经 `loadsgf/printsgf` 补齐后可接 CGTC。
 2. **GTP 适配器**：未实现；协议语义已对齐，属机械映射工作。

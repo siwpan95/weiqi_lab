@@ -32,7 +32,8 @@
 | `docs/TIER3_LEARNING.md` | 学习型组件（Markov / CNN）路线与决策请求 |
 | `harness/` | 跨引擎一致性总入口：引擎清单 + JSON-stdio 客户端 + 三项校验 |
 | `tournament/` | 独立裁判层 + 循环赛 runner + 开局库 + 战报（`reports/`） |
-| `tools/` | 共享 I/O 层：`sgf.mjs` `gtp.mjs` `regress.mjs` `markov.mjs` `train_markov.mjs` + `gen_golden.py` |
+| `tools/` | 共享 I/O 层：`sgf.mjs` `gtp.mjs` `regress.mjs` `markov.mjs` `train_markov.mjs` `import_human.mjs` + `gen_golden.py` |
+| `ml/` | **破例依赖区**（仅 `numpy`）：CNN 策略头 `cnn.py`/`corpus.py`/`train_cnn.py`/`eval_compare.py` + 权重 `cnn-*.npz` |
 
 ## 3. 验证状态（2026-10-08 ~ 10-09 实测）
 
@@ -71,19 +72,24 @@
   （循环赛按各引擎速度折算 **等效 ~1s/手** 的固定算力预算，见 `harness/engines.mjs`）
 - 冒烟战报（10 局）：全部正常终局（99–139 手），0 非法 / 0 超时 / 0 崩溃 → `tournament/reports/`
 
-### 3.5 学习型组件（Markov）
+### 3.5 Tier 3 学习型组件（Markov ✅ / 人类语料 ✅ / CNN ✅）
 
-`node tools/train_markov.mjs` → 自对弈采样 → 训练「模式条件转移模型」→ 留出集评估 + 可预测性诊断
-→ 报告 `tournament/reports/markov-*.md`。**本轮实测（60 局语料 / 1308 留出手）**：
+| 实验 | 模型 | 语料 | 盘径 | **top-1** | top-3 | 均匀基线 |
+|---|---|---|---|---|---|---|
+| 基线（第一轮） | Markov 模式模型 | 自对弈 cpp vs go（60 局） | 9 | 4.1% | 11.3% | 4.55% |
+| **T3-A 语料升级** | Markov 模式模型 | **人类职业棋谱 PGD（6000 局）** | 19 | **7.3%**（17.0× 均匀） | 21.7% | 0.43% |
+| **T3-C 容量升级** | **CNN（numpy，~2 万参数）** | 同上人类语料 | 19 | **25.84%** | 42.54% | 0.41% |
+| 对照 | CNN（numpy） | 自对弈（60 局） | 9 | 17.58% | 38.76% | 4.55% |
 
-| 指标 | 模型 | 均匀基线 | 常数基线 |
-|---|---|---|---|
-| top-1 | 4.1% | 4.55% | 4.01% |
-| top-3 | 11.3% | 13.66% | ~10.7% |
+**两条轴都真实有效**：语料质量（相对均匀增益 0.91× → 17.0×；紧邻偏置 1.97× → 18.1×）与模型容量
+（模式模型 11.4% → CNN 25.8%，2.26×）。人类语料下模式模型的稳态热点直接落在**星位**，
+弱引擎语料则只有 `pass` 与边角噪声。详见 `docs/TIER3_LEARNING.md` 与 `tournament/reports/{markov,cnn}-*.md`。
 
-**结论**：top-1 未超过均匀基线，且已逼近语料自身可预测性上限（十字上下文后验 5.8%）——
-根因是**语料质量**（引擎着法有局部偏置 1.97× 但分布很散，全局众数仅 4%），
-不是模型实现。学习路线的先决条件是先提升引擎强度或引入人类棋谱，详见 `docs/TIER3_LEARNING.md`。
+**依赖边界**：破例引入的 `numpy` **仅在 `ml/`**（隔离 venv）；引擎/`tools/`/`harness/`/`tournament/` 仍零依赖。
+人类棋谱**不随仓分发**（`.cache/`、`spec/games/human-*.jsonl` 已 gitignore），按 `docs/RESEARCH.md` §7 的命令 + SHA 可复现。
+
+**Markov 开局已接入循环赛**：`OPENINGS=markov`（默认仍随机；模型缺失自动回退）。
+A/B 实测：开局棋形结构显著不同（连续手间距 1.77 vs 2.80），战果**无显著差异**（样本 20 局/组，见 `openings-ab-*.md`）。
 
 ## 4. 规则口径
 
@@ -113,22 +119,31 @@ node tools/regress.mjs                   # CGTC 式回归（6 引擎 72/72）
 # ④ 循环赛
 cd tournament && node probe.mjs && GAMES_PER_PAIR=2 node run_tournament.mjs
 
-# ⑤ 马尔可夫落子模型
-node tools/train_markov.mjs              # 采集 → 训练 → 留出评估 → 报告
+# ⑤ 学习型组件
+node tools/train_markov.mjs              # Markov：采集 → 训练 → 留出评估 → 报告
+MARKOV_CORPUS=spec/games/human-2026-10-09.jsonl MARKOV_SIZE=19 MARKOV_TAG=-human19 node tools/train_markov.mjs
+C://Users//psw//.workbuddy//binaries//python//envs//ml//Scripts//python.exe ml\train_cnn.py --corpus spec\games\human-2026-10-09.jsonl --size 19 --steps 2000 --batch 128 --max-games 600
+C://...//envs//ml//Scripts//python.exe ml\eval_compare.py --corpus spec\games\human-2026-10-09.jsonl --size 19
+
+# ⑥ 用 Markov 模型生成开局（循环赛）
+OPENINGS=markov GAMES_PER_PAIR=2 node tournament/run_tournament.mjs
 ```
 
 环境变量：`TOURNAMENT_SIZE/GAMES_PER_PAIR/OPENING_PLIES/TOURNAMENT_PLAYOUTS/MOVES_CAP`、
 `WEIQI_ENGINES`/`ENGINES_FILTER`、`MARKOV_GAMES/MARKOV_PLAYOUTS/MARKOV_ENGINES`、
-`WEIQI_PYTHON`（Python 解释器路径）。
+`WEIQI_PYTHON`（Python 解释器路径）、`MARKOV_TAG`（多实验报告后缀）、`OPENINGS=markov`、`REPORT_SUFFIX`。
 
 ## 6. 已知限制（诚实记录）
 
 1. **AI 强度受限**：纯标准库 + 朴素 playout 的 MCTS，9 路战术分辨力约 **±5 点**（300 playouts 下），
    1–3 子局部战术不可靠；循环赛结果应按「弱引擎互搏」解读。
-2. **学习型组件受语料质量封顶**（本轮实测）：引擎着法**有局部偏置但分布很散**
-   （紧邻 ≤1 为 21.8% ≈ 均匀期望 11.1% 的 1.97×，但全局众数偏移仅 4.01%、
-   十字上下文后验上限 5.77%），导致局部棋形马尔可夫模型 **top-1 4.1% 未超过均匀基线 4.55%**。
-   → 学习路线（含 CNN）的**前置条件是先提升引擎强度或引入人类棋谱**，详见 `docs/TIER3_LEARNING.md`。
+2. **AI 强度受限**：纯标准库 + 朴素 playout 的 MCTS，9 路战术分辨力约 **±5 点**（300 playouts 下），
+   1–3 子局部战术不可靠；循环赛结果应按「弱引擎互搏」解读。
+   其直接后果体现在 Tier 3：**弱引擎自对弈语料的可预测性极低**（紧邻偏置仅 1.97×、
+   Markov 模型 top-1 0.91× 均匀基线），换成人类职业棋谱后同一模型即达 **17.0× 均匀**。
+3. **学习型组件的边界**：CNN（`ml/`）依赖**仅 numpy**、约 2 万参数，19 路 top-1 25.84% 但推理 **404.9 µs/手**
+   （比查表慢 22×），且已接近当前规模的能力上限；**未接入引擎**（离线研究轴）。
+   若要用其预测力，建议走"蒸馏成零依赖先验表"的路子（见 `docs/TIER3_LEARNING.md` §5）。
 3. **未实现**：GTP 时间控制（按 no-op 应答）、`final_status_list` 的死活判定、SGF 变体保留策略（只保主线）、
    死子自动判定/收单官（采用与 Tromp-Taylor / Gomill internal 一致的"盘上皆活"约定）。
 4. **`genmove` 不要求跨语言一致**（RNG 允许差异）；同语言同 (局面, playouts, seed, profile) 可复现。

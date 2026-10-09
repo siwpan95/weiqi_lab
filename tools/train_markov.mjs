@@ -25,6 +25,8 @@ const GAMES = Number(process.env.MARKOV_GAMES || 60);
 const PLAYOUTS = Number(process.env.MARKOV_PLAYOUTS || 200);
 const ENGINE_KEYS = (process.env.MARKOV_ENGINES || "cpp,go").split(",").map((s) => s.trim());
 const MOVES_CAP = 3 * SIZE * SIZE;
+// 报告/模型文件名标签（同一天多次实验互不覆盖；留空 = 默认，供循环赛开局生成使用）
+const TAG = process.env.MARKOV_TAG || "";
 
 const today = () => {
   const d = new Date();
@@ -97,6 +99,7 @@ async function collect() {
       games.push({
         size: SIZE, komi: KOMI, black: black.key, white: white.key,
         result: sc.result, plies: moves.length, moves, samples, broken,
+        source: "selfplay:" + ENGINE_KEYS.join("+"),
       });
       process.stdout.write(`\r  采集 ${g + 1}/${GAMES} 局（${moves.length} 手，${sc.result}）      `);
     }
@@ -243,8 +246,9 @@ function loadCorpus(p) {
       if (!r.ok) break;
       last = m.vertex;
     }
-    return { size: g.size, komi: g.komi, playouts: g.playouts, black: g.black, white: g.white,
-      result: g.result, plies: moves.length, moves, samples, broken: g.broken };
+    return { size: g.size, komi: g.komi, playouts: g.playouts, source: g.source,
+      black: g.black, white: g.white, result: g.result, plies: moves.length,
+      moves, samples, broken: g.broken };
   });
 }
 
@@ -290,9 +294,9 @@ async function main() {
 
   // ---------- 产物 ----------
   const stamp = today();
-  const corpusPath = path.join(ROOT, "spec", "games", `corpus-${stamp}.jsonl`);
+  const corpusPath = path.join(ROOT, "spec", "games", `corpus-${stamp}${TAG}.jsonl`);
   const corpusLines = games.map((g) => JSON.stringify({
-    size: g.size, komi: g.komi, playouts: PLAYOUTS, black: g.black, white: g.white,
+    size: g.size, komi: g.komi, playouts: PLAYOUTS, source: g.source, black: g.black, white: g.white,
     result: g.result, plies: g.plies, broken: g.broken,
     moves: g.moves.map((m) => `${m.color}${vstr(m.vertex, SIZE)}`),
   }));
@@ -301,7 +305,8 @@ async function main() {
   } else {
     console.log("（复用语料模式：不重写语料与 SGF 样本）");
   }
-  const corpusPlayouts = games[0] && games[0].playouts ? games[0].playouts : PLAYOUTS;
+  const corpusPlayouts = (games[0] && games[0].playouts) ? games[0].playouts
+    : (String((games[0] && games[0].source) || "").startsWith("human") ? 0 : PLAYOUTS);
 
   // SGF 样本（前 3 局）
   if (!process.env.MARKOV_CORPUS) {
@@ -319,10 +324,10 @@ async function main() {
       };
       sgfCollection += serializeSgf(tree) + "\n";
     }
-    fs.writeFileSync(path.join(ROOT, "spec", "games", `sample-${stamp}.sgf`), sgfCollection, "utf8");
+    fs.writeFileSync(path.join(ROOT, "spec", "games", `sample-${stamp}${TAG}.sgf`), sgfCollection, "utf8");
   }
 
-  const modelPath = path.join(ROOT, "spec", "markov_model.json");
+  const modelPath = path.join(ROOT, "spec", TAG ? `markov_model${TAG}.json` : "markov_model.json");
   const model = {
     protocol: 1, spec: "markov-v1", created: stamp, size: SIZE, komi: KOMI,
     engineKeys: ENGINE_KEYS, games: okGames.length, playouts: PLAYOUTS,
@@ -337,7 +342,8 @@ async function main() {
   L.push("");
   L.push("## 语料");
   L.push("");
-  L.push(`- 自对弈：${ENGINE_KEYS.join(" vs ")}（${SIZE} 路 · komi ${KOMI} · ${corpusPlayouts} playouts/手）`);
+  const corpusSource = (games[0] && games[0].source) || ENGINE_KEYS.join(" vs ");
+  L.push(`- 语料来源：**${corpusSource}**（${SIZE} 路 · 训练时 komi ${KOMI}）${corpusPlayouts ? ` · ${corpusPlayouts} playouts/手` : ""}`);
   L.push(`- 局数：${games.length}（可用 ${okGames.length}）；训练 ${train.length} / 留出 ${test.length}`);
   L.push(`- 手数：${games.reduce((a, g) => a + g.plies, 0)}；平均 ${(games.reduce((a, g) => a + g.plies, 0) / Math.max(1, games.length)).toFixed(1)} 手/局`);
   L.push("");
@@ -398,7 +404,7 @@ async function main() {
   L.push(`> 生成耗时 ${((Date.now() - t0) / 1000).toFixed(1)}s；\`tools/train_markov.mjs\` 自动生成。`);
   const reportDir = path.join(ROOT, "tournament", "reports");
   fs.mkdirSync(reportDir, { recursive: true });
-  const reportPath = path.join(reportDir, `markov-${stamp}.md`);
+  const reportPath = path.join(reportDir, `markov-${stamp}${TAG}.md`);
   fs.writeFileSync(reportPath, L.join("\n") + "\n", "utf8");
 
   console.log(`\n留出集：覆盖 ${(metrics.coverage * 100).toFixed(1)}%  top1=${(metrics.top1 * 100).toFixed(1)}%  top3=${(metrics.top3 * 100).toFixed(1)}%  (均匀基线 ${(metrics.uniform * 100).toFixed(2)}%)`);

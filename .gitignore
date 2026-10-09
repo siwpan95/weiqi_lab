@@ -20,3 +20,9 @@ local.env
 .vscode/
 .idea/
 *.log
+
+# 人类棋谱原始归档（超大，本地缓存，不入库）
+.cache/
+
+# 第三方人类棋谱（PGD）派生语料：不随仓分发，按 tools/import_human.mjs 可复现（见 docs/RESEARCH.md §6）
+spec/games/human-*.jsonl

@@ -10,12 +10,15 @@
 | `harness/` | Node ≥ 20（仅标准库，ESM） | **无 npm 依赖**，无需 `npm install` |
 | `tournament/` | Node ≥ 20（仅标准库） | 含独立裁判引擎 |
 | `tools/`（SGF / GTP / 让子 / Markov） | Node ≥ 20（仅标准库） | 共享 I/O 层 + 学习组件 |
+| `ml/`（CNN 策略头） | **`numpy`（唯一破例依赖，隔离于 `ml/` 内）** | 训练/评测用；引擎与其余目录仍零依赖 |
 
 ## 2. 工具链（本机实测状态，2026-10-09）
 
 | 需求 | 本机版本 / 路径 | 状态 | 用途 |
 |---|---|---|---|
-| Python | 3.14.7（`G:\Python314`，PATH 上的 `python`） | ✅ | `PyWeiqi/`（亦可用托管 3.13.12，注意其标准库完整性） |
+| Python（PATH 上的 `python`） | **托管 3.13.12**（embeddable，已修复，见 §2.1） | ✅ | `PyWeiqi/`、`tools/*.py` |
+| Python（含 pip） | 3.14.7（`G:\Python314`，pip 26.2.1） | ✅ | 建 venv 装 `numpy`（`ml/`） |
+| ML venv | `C:\Users\psw\.workbuddy\binaries\python\envs\ml`（numpy 2.5.3） | ✅ | `ml/` 训练与评测 |
 | Node.js | 22.22.2 | ✅ | `JsWeiqi/` + `harness/` + `tournament/` + `tools/` |
 | Rust + Cargo | 1.98.0 | ✅ | `RustWeiqi/`（`cargo build --release`） |
 | MinGW-w64 g++ | 15.2.0（`G:\mingw64`） | ✅ | `CppWeiqi/`（`bash build.sh`，`-O2 -static`） |
@@ -28,6 +31,22 @@
 > 已修复方式：从阿里镜像下载完整发行包解压到受管目录（**未改动 `G:\go`**），
 > `GoWeiqi/build.sh` 内**显式设置 `GOROOT`** 指向受管路径。若要让 PATH 上的 `go` 也恢复，
 > 需另行清理全局 `GOROOT` 环境变量（属环境变更，未擅自执行）。
+
+## 2.1 环境修复记录（2026-10-09）
+
+- **Git for Windows / Bash 工具失效**：环境变量 `CODEBUDDY_CODE_GIT_BASH_PATH` 原指向
+  `...\PortableGit\versions\1.2.0\bin\bash.exe`（该目录只剩一个存根 `bash.exe`，无 coreutils），
+  且 PATH 中的 `...\versions\2.55.0\...` 两条目录**已被删除** → Bash 工具整体不可用
+  （报 `Top-level not found`）。
+  **修复**：把 `versions\1.2.0` 与 `versions\2.55.0` 都建成**指向完整 Git 安装 `G:\Git` 的 junction**
+  （原存根改名留档为 `1.2.0.stub-backup`），并把用户级 `CODEBUDDY_CODE_GIT_BASH_PATH`
+  改为 `G:\Git\bin\bash.exe`。
+  **验证**：`git version 2.55.0.windows.2`；`ls` / `node` / `curl` 均正常。
+- **Python 托管运行时残缺**：PATH 上的托管 3.13.12 曾**缺整个 `Lib/`**
+  （`Fatal Python error: Failed to import encodings module`）。
+  **修复**：用官方 embeddable 包重装该目录（原残缺目录留档为 `3.13.12.broken-backup`）。
+  需要 pip/第三方包时改用 `G:\Python314`（3.14.7）。
+- **go**：见 §2 表中说明（受管安装 + `GOROOT` 显式设置）。
 
 ## 3. 构建（克隆/换机后）
 
@@ -46,6 +65,12 @@ cd GoWeiqi   && bash build.sh                  # goweiqi.exe（脚本内设 GORO
 ## 4. 验收门（改动后必须全绿）
 
 ```bash
+# ⓪ ml 环境（如需 CNN）
+C:\Users\psw\.workbuddy\binaries\python\envs\ml\Scripts\python.exe -c "import numpy;print(numpy.__version__)"
+# 人类棋谱语料复现（PGD，104MB 下载；语料不入库，见 docs/RESEARCH.md §7）
+curl -sL -o .cache/human/pgd.tar.gz https://codeload.github.com/wangjinzhuo/pgd/tar.gz/refs/heads/master
+node tools/import_human.mjs .cache/human/pgd.tar.gz --max 6000 --size 19
+
 # ① 各语言自测（黄金值 35 用例 + 内部单测）
 cd PyWeiqi   && python main.py test
 cd JsWeiqi   && node main.mjs test

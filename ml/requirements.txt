@@ -1,0 +1,12 @@
+# ml/ —— Tier 3 学习型组件（CNN 着法预测）
+#
+# 本目录**破例引入第三方依赖**：仅 numpy。
+# 说明：
+#   - 各语言引擎目录（CppWeiqi/GoWeiqi/RustWeiqi/PyWeiqi/CsWeiqi/JsWeiqi）、
+#     tools/、harness/、tournament/ 均**仍保持零第三方依赖**，不受本文件影响。
+#   - 破例范围严格限定在 ml/ 内，且只允许 numpy；禁止 torch/tensorflow/sklearn 等。
+#
+# 安装（隔离 venv，禁止污染全局 site-packages）：
+#   G:\Python314\python.exe -m venv C:\Users\psw\.workbuddy\binaries\python\envs\ml
+#   C:\Users\psw\.workbuddy\binaries\python\envs\ml\Scripts\python.exe -m pip install -r ml\requirements.txt
+numpy>=2.0

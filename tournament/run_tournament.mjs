@@ -24,6 +24,8 @@ const GAMES_PER_PAIR = Number(process.env.GAMES_PER_PAIR || 2);
 const OPENING_PLIES = Number(process.env.OPENING_PLIES ?? 2);
 const MOVES_CAP = Number(process.env.MOVES_CAP || 3 * SIZE * SIZE);
 const FILTER = (process.env.ENGINES_FILTER || "").split(",").map((s) => s.trim()).filter(Boolean);
+// 战报文件名后缀（追加到 <date>.md 之前）；默认空串 → 行为不变
+const REPORT_SUFFIX = process.env.REPORT_SUFFIX || "";
 
 function specFiltered() {
   let list = availableEngines();
@@ -94,7 +96,7 @@ async function main() {
   const report = renderReport({ specs, stats, games, divergence, budgets, t0 });
   const dir = path.join(ROOT, "tournament", "reports");
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${today()}.md`);
+  const file = path.join(dir, `${today()}${REPORT_SUFFIX}.md`);
   fs.writeFileSync(file, report, "utf8");
   console.log(`\n战报已写入: ${file}`);
 

@@ -1,0 +1,108 @@
+{
+ "meta": {
+  "size": 19,
+  "corpus": "spec/games/human-2026-10-09.jsonl",
+  "steps": 2000,
+  "batch": 128,
+  "channels": 32,
+  "lr": 0.002,
+  "seed": 0,
+  "val_frac": 0.2,
+  "train_samples": 99668,
+  "val_samples": 24438,
+  "cut_game": 480,
+  "num_games": 600,
+  "max_games": 600,
+  "max_positions": null,
+  "final_train_loss": 3.4073,
+  "val_top1": 0.2584,
+  "val_top3": 0.4254,
+  "uniform_top1": 0.0043,
+  "elapsed_s": 1982.3,
+  "sources": [
+   "spec/games/human-2026-10-09.jsonl"
+  ]
+ },
+ "curve": [
+  {
+   "step": 200,
+   "train_loss": 4.3037,
+   "batch_top1": 0.1328,
+   "val_top1": 0.1445,
+   "val_top3": 0.3042,
+   "elapsed_s": 133.8
+  },
+  {
+   "step": 400,
+   "train_loss": 3.8479,
+   "batch_top1": 0.1719,
+   "val_top1": 0.209,
+   "val_top3": 0.376,
+   "elapsed_s": 354.8
+  },
+  {
+   "step": 600,
+   "train_loss": 3.5555,
+   "batch_top1": 0.25,
+   "val_top1": 0.2289,
+   "val_top3": 0.3912,
+   "elapsed_s": 550.6
+  },
+  {
+   "step": 800,
+   "train_loss": 3.4996,
+   "batch_top1": 0.2812,
+   "val_top1": 0.2416,
+   "val_top3": 0.4024,
+   "elapsed_s": 815.0
+  },
+  {
+   "step": 1000,
+   "train_loss": 3.4305,
+   "batch_top1": 0.2422,
+   "val_top1": 0.2454,
+   "val_top3": 0.4066,
+   "elapsed_s": 950.4
+  },
+  {
+   "step": 1200,
+   "train_loss": 3.4103,
+   "batch_top1": 0.2422,
+   "val_top1": 0.2531,
+   "val_top3": 0.4182,
+   "elapsed_s": 1084.6
+  },
+  {
+   "step": 1400,
+   "train_loss": 3.4192,
+   "batch_top1": 0.2266,
+   "val_top1": 0.2506,
+   "val_top3": 0.4143,
+   "elapsed_s": 1260.9
+  },
+  {
+   "step": 1600,
+   "train_loss": 3.6709,
+   "batch_top1": 0.1797,
+   "val_top1": 0.2525,
+   "val_top3": 0.426,
+   "elapsed_s": 1557.4
+  },
+  {
+   "step": 1800,
+   "train_loss": 3.3161,
+   "batch_top1": 0.2656,
+   "val_top1": 0.2496,
+   "val_top3": 0.4218,
+   "elapsed_s": 1782.0
+  },
+  {
+   "step": 2000,
+   "train_loss": 3.4073,
+   "batch_top1": 0.2578,
+   "val_top1": 0.2584,
+   "val_top3": 0.4254,
+   "elapsed_s": 1982.3
+  }
+ ]
+}
