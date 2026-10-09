@@ -11,6 +11,7 @@
 //        --positions 16 --playouts 60 --prior 3 [--seed 7] \
 //        [--profA '{"probe_k":3}' --profB '{"probe_k":3,"pbias":0.5,"pbias_model":"..."}'] \
 //        [--start 4800]   # 起点行号（跳过训练集，做**留出**探针；训练集为前 80% 局）
+//        [--tag -pbias9]  # 报告文件名后缀（避免不同实验互相覆盖）
 //   ⚠️ 若被评估的表正是用该语料前 80% 训练的，必须用 --start 跳过训练段，否则一致性被高估。
 
 import fs from "node:fs";
@@ -155,7 +156,8 @@ for (const r of rows) {
 }
 const out = L.join("\n") + "\n";
 const stamp = new Date().toISOString().slice(0, 10);
-const outPath = path.join(HERE, "..", "tournament", "reports", `human-agreement-${stamp}.md`);
+const TAG = arg("tag", "");
+const outPath = path.join(HERE, "..", "tournament", "reports", `human-agreement-${stamp}${TAG}.md`);
 fs.writeFileSync(outPath, out, "utf8");
 console.log(out);
 console.log(`→ ${outPath}`);

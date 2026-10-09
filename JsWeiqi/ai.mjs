@@ -993,7 +993,10 @@ function playout(pb, rng, pr, max_moves, opts = null) {
   const lgrOn = lgrTab !== null;
   const lgrN2 = lgrOn ? pb.n2 : 0;
   const lib2P = Number(pr["lib2"]) || 0; // 0 = 关闭（不消耗随机数，行为不变）
-  const pbScratch = pbOn ? new Float64Array(pb.n2) : null; // 加权采样缓冲（每 playout 一次分配）
+  // 加权采样缓冲：优先用 genmove 预分配的那份（**每 playout 分配会带来 GC 压力**）
+  const pbScratch = pbOn
+    ? ((opts && opts.scratch) ? opts.scratch : new Float64Array(pb.n2))
+    : null;
   let moves = 0;
   let mPrev = -1; // LGR：本 playout 内"最后一手之前的那一手"（-1 = 未知 / 上一手为过手）
   while (pb.passes < 2 && moves < max_moves) {
@@ -1234,7 +1237,9 @@ export function genmove(board, playouts = 500, seed = 0, profile = null, reuse =
       console.warn(`[ai] pbias=${pbW} 但模式表不可用 → 已按原 playout 运行：${_pbTabFail}`);
     }
   }
-  const plOpts = (lgrTab || pbTab) ? { lgr: lgrTab, tab: pbTab, w: pbW } : null;
+  const plOpts = (lgrTab || pbTab)
+    ? { lgr: lgrTab, tab: pbTab, w: pbW, scratch: pbTab ? new Float64Array(n2) : null }
+    : null;
   let root = new Node(PASS_MOVE, board.side);
   root.expanded = true;
   // ---- 树重用（可选）：把"对手实际下的那手"对应的子树提升为新根，继承其访问统计 ----
