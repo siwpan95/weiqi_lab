@@ -29,3 +29,8 @@ spec/games/human-*.jsonl
 
 # CNN 策略导出（派生产物，300 万级 logits，可由 ml/export_cnn_policy.py 复现）
 ml/cnn_policy-*.jsonl
+
+# 循环赛导出物（每局 SGF + 机读着法序列，由 run_tournament.mjs 生成，可复现）
+tournament/sgf/
+# 循环赛战报（每日自动生成，可复现）
+tournament/reports/

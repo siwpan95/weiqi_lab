@@ -11,6 +11,10 @@
 //   node run_tournament.mjs
 //   TOURNAMENT_PLAYOUTS=200 GAMES_PER_PAIR=1 OPENING_PLIES=2 ENGINES_FILTER=py,rs,cs node run_tournament.mjs
 //   TOURNAMENT_SIZE=9  （棋盘路数）
+//   EXPORT_SGF=0 node run_tournament.mjs   （关闭每局 SGF 导出；默认开启）
+//
+// 对局过程导出：每局完整着法序列会写入 tournament/sgf/<date>-gNN-<B>vs<W>.sgf
+// （FF[4]，可被 Sabaki/q5Go 打开），并附机读着法序列 tournament/sgf/<date>.moves.json。
 
 import fs from "node:fs";
 import path from "node:path";
@@ -18,6 +22,7 @@ import { ROOT, availableEngines } from "../harness/engines.mjs";
 import { EngineClient } from "../harness/client.mjs";
 import { Ref, parseVertex, formatVertex, parseColor } from "./referee.mjs";
 import { openingLine } from "./openings.mjs";
+import { serializeSgf, vertexToSgf } from "../tools/sgf.mjs";
 
 const SIZE = Number(process.env.TOURNAMENT_SIZE || 9);
 const GAMES_PER_PAIR = Number(process.env.GAMES_PER_PAIR || 2);
@@ -133,6 +138,42 @@ async function main() {
   }, null, 1) + "\n", "utf8");
   console.log(`机读记录: ${jsonPath}`);
 
+  // ---------- 对局过程导出（SGF + 机读着法序列） ----------
+  if (process.env.EXPORT_SGF !== "0" && games.length) {
+    const sgfDir = path.join(ROOT, "tournament", "sgf");
+    fs.mkdirSync(sgfDir, { recursive: true });
+    const nameOf = (k) => (specs.find((s) => s.key === k) || {}).name || k;
+    const movesLog = [];
+    for (const g of games) {
+      const full = g.fullMoves || [];
+      const nodes = full.map((m) => ({
+        color: m.color,
+        value: m.vertex === "pass" || m.vertex === -1 ? "" : vertexToSgf(m.vertex, SIZE),
+      }));
+      const tree = {
+        root: {
+          SZ: [String(SIZE)],
+          KM: ["7.5"],
+          RU: ["Chinese"],
+          RE: [g.result || "?"],
+          PB: [nameOf(g.black) || g.black],
+          PW: [nameOf(g.white) || g.white],
+          GC: [`weiqi_lab tournament g${g.gno}`],
+        },
+        nodes,
+      };
+      const sgfName = `${today()}-g${String(g.gno).padStart(2, "0")}-${g.black}vs${g.white}.sgf`;
+      fs.writeFileSync(path.join(sgfDir, sgfName), serializeSgf(tree) + "\n", "utf8");
+      movesLog.push({
+        gno: g.gno, black: g.black, white: g.white, result: g.result,
+        moves: full.map((m) => ({ color: m.color, vertex: m.vertex })),
+      });
+    }
+    const movesPath = path.join(sgfDir, `${today()}.moves.json`);
+    fs.writeFileSync(movesPath, JSON.stringify(movesLog, null, 1) + "\n", "utf8");
+    console.log(`对局过程已导出: ${games.length} 局 SGF + 着法序列 -> ${sgfDir}`);
+  }
+
   // ---------- 交叉表摘要 ----------
   console.log("\n交叉表（行=黑胜/白胜合并计入胜负）:");
   const keys = specs.map((s) => s.key);
@@ -208,12 +249,12 @@ async function playGame(gno, blackSpec, whiteSpec, clients, budgets, stats, dive
       anomaly = `${spec.key} 引擎错误: ${e.message}`;
       winnerKey = spec.key === blackSpec.key ? whiteSpec.key : blackSpec.key;
       result = `${winnerKey === blackSpec.key ? "B" : "W"}+R`;
-      return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result, moves: plies, anomaly, movesTail: tail(moves) };
+      return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result, moves: plies, anomaly, movesTail: tail(moves), fullMoves: moves };
     }
     if (mv === "resign") {
       winnerKey = spec.key === blackSpec.key ? whiteSpec.key : blackSpec.key;
       result = (winnerKey === blackSpec.key ? "B" : "W") + "+R";
-      return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result, moves: plies, anomaly, movesTail: tail(moves) };
+      return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result, moves: plies, anomaly, movesTail: tail(moves), fullMoves: moves };
     }
     const vertex = mv === "pass" ? -1 : parseVertex(mv, SIZE);
     const r = ref.play(parseColor(color), vertex);
@@ -222,7 +263,7 @@ async function playGame(gno, blackSpec, whiteSpec, clients, budgets, stats, dive
       anomaly = `${spec.key} 非法着法 ${mv} (${r.reason})`;
       winnerKey = spec.key === blackSpec.key ? whiteSpec.key : blackSpec.key;
       result = `${winnerKey === blackSpec.key ? "B" : "W"}+F`;
-      return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result, moves: plies, anomaly, movesTail: tail(moves) };
+      return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result, moves: plies, anomaly, movesTail: tail(moves), fullMoves: moves };
     }
     moves.push({ color, vertex: mv });
     if (vertex === -1) st.moves += 0;
@@ -240,7 +281,7 @@ async function playGame(gno, blackSpec, whiteSpec, clients, budgets, stats, dive
       winnerKey = other.key === blackSpec.key ? whiteSpec.key : blackSpec.key;
       result = `${winnerKey === blackSpec.key ? "B" : "W"}+F`;
       return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey,
-        result, moves: plies, anomaly, movesTail: tail(moves) };
+        result, moves: plies, anomaly, movesTail: tail(moves), fullMoves: moves };
     }
   }
 
@@ -255,7 +296,7 @@ async function playGame(gno, blackSpec, whiteSpec, clients, budgets, stats, dive
     anomaly = `达到手数上限 ${MOVES_CAP}（按现状计分）`;
   }
   return { gno, black: blackSpec.key, white: whiteSpec.key, winner: winnerKey, result,
-    moves: plies, anomaly, movesTail: tail(moves), score: sc };
+    moves: plies, anomaly, movesTail: tail(moves), score: sc, fullMoves: moves };
 }
 
 function tail(moves, n = 6) {

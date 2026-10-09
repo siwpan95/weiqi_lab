@@ -11,6 +11,9 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 
 const PY = process.env.WEIQI_PYTHON || "python";
 const NODE = process.execPath;
+// C# 引擎启动命令覆盖：本机 dotnet 装在 D:\dotnet10（系统 C:\Program Files\dotnet 已损坏），
+// 若 PATH 顺序未生效，可用 WEIQI_DOTNET=D:/dotnet10/dotnet.exe 显式指定（与 WEIQI_PYTHON 同惯例）。
+const DOTNET = process.env.WEIQI_DOTNET || "dotnet";
 
 export const ENGINES = [
   {
@@ -37,7 +40,7 @@ export const ENGINES = [
   },
   {
     key: "cs", name: "CsWeiqi", lang: "cs",
-    cmd: "dotnet", args: [path.join("bin", "Release", "net10.0", "CsWeiqi.dll"), "driver"],
+    cmd: DOTNET, args: [path.join("bin", "Release", "net10.0", "CsWeiqi.dll"), "driver"],
     cwd: path.join(ROOT, "CsWeiqi"),
     playouts: 8000,
   },
