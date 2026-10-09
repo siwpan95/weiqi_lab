@@ -26,6 +26,18 @@ const MOVES_CAP = Number(process.env.MOVES_CAP || 3 * SIZE * SIZE);
 const FILTER = (process.env.ENGINES_FILTER || "").split(",").map((s) => s.trim()).filter(Boolean);
 // 战报文件名后缀（追加到 <date>.md 之前）；默认空串 → 行为不变
 const REPORT_SUFFIX = process.env.REPORT_SUFFIX || "";
+// 可选：给所有引擎统一传一个 profile（如 PROFILE_JSON='{"probe_k":3,"pw_c":0.5,"pw_min":6}'）。
+// ⚠️ 默认 `{}` = 全关闭 → 跨语言对比公平。仅当**所有参赛语言都实现了**这些开关时才用于跨语言赛；
+//    否则只应用于同语言实验（见 docs/PORTING.md §4.1 的移植待办）。
+let PROFILE = {};
+if (process.env.PROFILE_JSON) {
+  try {
+    PROFILE = JSON.parse(process.env.PROFILE_JSON);
+  } catch (e) {
+    console.error(`PROFILE_JSON 不是合法 JSON：${e.message}`);
+    process.exit(2);
+  }
+}
 
 function specFiltered() {
   let list = availableEngines();
@@ -180,7 +192,7 @@ async function playGame(gno, blackSpec, whiteSpec, clients, budgets, stats, dive
         color,
         playouts: budgets.get(spec.key),
         seed: seedBase + plies * 131,
-        profile: {},
+        profile: PROFILE,
       });
       mv = res.vertex;
       st.genmoves++;
