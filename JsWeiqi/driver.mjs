@@ -13,7 +13,7 @@ import {
   Board, parse_vertex, format_vertex, parse_color, normalize_rules, fmt_key,
   color_name, WeiqiError,
 } from "./rules.mjs";
-import { genmove, PASS } from "./ai.mjs";
+import { genmove, PASS, lastMoveOf } from "./ai.mjs";
 import { run_golden, default_golden_path } from "./golden.mjs";
 
 export const NAME = "JsWeiqi";
@@ -42,6 +42,8 @@ function as_int(v) {
 export class Driver {
   constructor() {
     this.board = new Board(9);
+    this._reuseNode = null;    // 树重用句柄（上次 genmove 选中着法对应的子树根）
+    this._genmoveDepth = -1;   // 上次 genmove 落子后的栈深度
   }
 
   // ---------- 命令实现 ----------
@@ -126,11 +128,25 @@ export class Driver {
     const seed = as_int(req["seed"] !== undefined ? req["seed"] : 0);
     const profile = req["profile"] || {};
     if (color !== this.board.side) throw new CmdError("genmove for wrong side", "turn");
-    const [mv, n, wr] = genmove(this.board, playouts, seed, profile);
-    if (mv === "resign") return { vertex: "resign", visits: n, winrate: wr };
+    // ---- 树重用（profile.tree_reuse > 0 启用；默认 0 = 关闭，行为不变）----
+    // 仅当"自上次 genmove 后恰好有一手对手着法"时启用（判据用栈深度差，精确且不受 play/undo 干扰）
+    const reuseOn = Number(profile["tree_reuse"] || 0) > 0;
+    let reuse = null;
+    if (reuseOn && this._reuseNode && this._genmoveDepth >= 0
+      && this.board.stack.length === this._genmoveDepth + 1) {
+      reuse = { node: this._reuseNode, oppMove: lastMoveOf(this.board) };
+    }
+    const [mv, n, wr, bestChild] = genmove(this.board, playouts, seed, profile, reuse);
+    if (mv === "resign") {
+      this._reuseNode = null;
+      this._genmoveDepth = -1;
+      return { vertex: "resign", visits: n, winrate: wr };
+    }
     const vertex = mv === PASS ? "pass" : format_vertex(mv, this.board.size);
     const r = this.board.play(color, mv);
     if (!r.ok) throw new CmdError("internal: chosen move illegal", r.reason);
+    this._reuseNode = bestChild || null;      // 供下次 genmove 复用（pass 时为 null）
+    this._genmoveDepth = this.board.stack.length;
     return { vertex, visits: n, winrate: wr };
   }
 

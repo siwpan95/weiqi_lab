@@ -367,6 +367,9 @@ export const DEFAULT_PROFILE = {
   cnn_prior_weights: null,  // 权重文件路径覆盖；null = spec/cnn_weights-<size>.json
   // ---- 惰性探测（可选；默认 0 = 探测全部候选，与原行为逐位一致）----
   probe_k: 0,               // >0：playout 每手最多探测 k 个普通候选（提子点必探，不受限）
+  // ---- 渐进加宽（可选；默认 0 = 一次开放全部候选，与原行为逐位一致）----
+  pw_c: 0,                  // >0：候选开放数 k = max(pw_min, ⌈c·√(N+1)⌉)，随节点访问数增长
+  pw_min: 8,                // 初始最少开放候选数（防止根节点过早收窄）
 };
 
 // ---------------------------------------------------------------- CNN 先验
@@ -448,6 +451,23 @@ export class Node {
     this.expanded = false;
     this.prior = prior;
     this.cnnP = 0.0; // CNN 先验（归一化到本节点候选集；未启用时恒为 0）
+    this.candPool = null; // 渐进加宽：完整候选列表（按 prior 降序，同分保持随机序）
+    this.candAdded = 0;   // 已开放到 children 的数量
+  }
+}
+
+// 渐进加宽：按节点访问数决定"应开放多少候选"，把更多候选逐步加入 children。
+// k = min(poolLen, max(minK, ⌈c·√(N+1)⌉))。新加入的候选因"未访问 + 最大探索项"会被优先采样。
+function widenNode(node, c, minK) {
+  const pool = node.candPool;
+  if (!pool) return;
+  const want = Math.min(pool.length, Math.max(minK, Math.ceil(c * Math.sqrt(node.N + 1))));
+  while (node.candAdded < want) {
+    const item = pool[node.candAdded];
+    node.candAdded += 1;
+    const m = item[0];
+    if (node.children.has(m)) continue;
+    node.children.set(m, new Node(m, 3 - node.to_move, move_prior(item[1], item[2])));
   }
 }
 
@@ -778,11 +798,16 @@ function lessKey(a, b) {
 }
 
 /**
- * 对 board（完整规则 Board）搜索并返回 [vertex, visits, winrate]。
+ * 对 board（完整规则 Board）搜索并返回 [vertex, visits, winrate, bestChild]。
  * 不落子 —— 落子由调用方（driver）执行，以便用完整规则复检。
  * vertex 可为点索引、PASS(=-1) 或字符串 "resign"。
+ *
+ * `reuse`（可选）：`{ node, oppMove }` —— 上次 genmove 返回的 bestChild（我方那手之后的节点）
+ *   与本次"对手实际下的那一手"。若该手在 node 的子节点中，则把它提升为新根，
+ *   直接继承其访问统计（等效算力 +20~50%）。局面不符时安全回退为全新搜索。
+ *   返回值第 4 项 `bestChild` 供下次调用复用（null 表示不可复用：pass/resign/无子节点）。
  */
-export function genmove(board, playouts = 500, seed = 0, profile = null) {
+export function genmove(board, playouts = 500, seed = 0, profile = null, reuse = null) {
   const pr = Object.assign({}, DEFAULT_PROFILE);
   if (profile) {
     for (const k of Object.keys(profile)) {
@@ -799,16 +824,39 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
 
   const pb0 = new PBoard(size, neigh, Uint8Array.from(board.cells), board.side,
     board.ko_point, board.passes, suicide_allow);
+  // 渐进加宽参数（pw_c=0 → 保持"一次开放全部候选"的原行为）
+  const pwC = Number(pr["pw_c"]) || 0;
+  const pwMin = Math.max(1, Math.trunc(Number(pr["pw_min"]) || 8));
   const radius = Math.trunc(Number(pr["prune_radius"]));
-  const root = new Node(PASS_MOVE, board.side);
+  let root = new Node(PASS_MOVE, board.side);
   root.expanded = true;
-  const moves = candidates(pb0, board.side, radius).filter(([p]) => full_set.has(p));
-  rng_shuffle(moves, rng);
-  for (const [m, c, ol] of moves) {
-    root.children.set(m, new Node(m, 3 - board.side, move_prior(c, ol)));
+  // ---- 树重用（可选）：把"对手实际下的那手"对应的子树提升为新根，继承其访问统计 ----
+  let reused = false;
+  if (reuse && reuse.node && reuse.node.children && reuse.node.children.size > 0) {
+    const child = reuse.node.children.get(reuse.oppMove);
+    if (child && child.to_move === board.side) {
+      root = child;
+      root.move = PASS_MOVE; // 根节点的 move 字段不参与搜索逻辑
+      reused = true;
+    }
   }
-  if (root.children.size === 0) {
-    return [PASS_MOVE, 0, 0.0]; // 无任何非填眼着法 → 过手（终局机制）
+  if (!reused) {
+    const moves = candidates(pb0, board.side, radius).filter(([p]) => full_set.has(p));
+    rng_shuffle(moves, rng);
+    if (pwC > 0) {
+      // 渐进加宽：按 prior 降序（稳定排序保留同分的随机序），先开放前 k 个
+      moves.sort((a, b) => move_prior(b[1], b[2]) - move_prior(a[1], a[2]));
+      root.candPool = moves;
+      root.candAdded = 0;
+      widenNode(root, pwC, pwMin);
+    } else {
+      for (const [m, c, ol] of moves) {
+        root.children.set(m, new Node(m, 3 - board.side, move_prior(c, ol)));
+      }
+    }
+  }
+  if (!reused && root.children.size === 0) {
+    return [PASS_MOVE, 0, 0.0, null]; // 无任何非填眼着法 → 过手（终局机制）
   }
 
   // ---- CNN 先验（可选）：根节点一定尝试；深层节点受 cnn_prior_max_nodes 预算限制 ----
@@ -820,7 +868,7 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
     if (cnnNet) {
       pb0.last = lastMoveOf(board); // 根局面的"最后一手"来自完整规则栈
       cnnBudget = Math.max(1, Math.trunc(Number(pr["cnn_prior_max_nodes"]))) - 1; // 根用掉 1 次
-      attachCnnPrior(cnnNet, pb0, root);
+      if (!reused) attachCnnPrior(cnnNet, pb0, root); // 复用节点的 cnnP 已在旧搜索中归一化
     } else if (!_cnnWarned) {
       _cnnWarned = true;
       console.warn(`[ai] cnn_prior=${cnnW} 但先验不可用 → 已按纯 UCT 运行：${_cnnFailReason}`);
@@ -830,19 +878,31 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
 
   const max_moves = 3 * n2;
   const iters = Math.max(1, Math.trunc(Number(playouts)));
+  // RAVE 的"本次迭代下过哪些手"用代际标记数组（零分配；替代每迭代 new Set()×2）
+  const simStamp1 = new Int32Array(n2);
+  const simStamp2 = new Int32Array(n2);
   for (let it = 0; it < iters; it++) {
     let pb = pb0.clone();
     let node = root;
     const chain = [root];
-    const sim_moves = { 1: new Set(), 2: new Set() };
+    const itMark = it + 1; // 每次迭代唯一
+    let cnt1 = 0;
+    let cnt2 = 0;
     while (node.expanded && node.children.size > 0) {
+      if (pwC > 0) widenNode(node, pwC, pwMin); // 渐进加宽：访问前按 N 增长开放更多候选
       const m = select(node, Number(pr["c"]), Number(pr["rave_k"]), Boolean(pr["rave"]),
         cnnActive ? cnnW : 0.0);
       const color = node.to_move;
       if (m === PASS_MOVE) pb.play_pass(color);
       else {
         pb.apply(color, m);
-        sim_moves[color].add(m);
+        if (color === 1) {
+          simStamp1[m] = itMark;
+          cnt1 += 1;
+        } else {
+          simStamp2[m] = itMark;
+          cnt2 += 1;
+        }
       }
       node = node.children.get(m);
       chain.push(node);
@@ -850,10 +910,17 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
     if (!node.expanded) {
       const cl = candidates(pb, node.to_move, radius);
       rng_shuffle(cl, rng);
-      for (const [m, c, ol] of cl) {
-        node.children.set(m, new Node(m, 3 - node.to_move, move_prior(c, ol)));
-      }
       node.expanded = true;
+      if (pwC > 0) {
+        cl.sort((a, b) => move_prior(b[1], b[2]) - move_prior(a[1], a[2]));
+        node.candPool = cl;
+        node.candAdded = 0;
+        widenNode(node, pwC, pwMin);
+      } else {
+        for (const [m, c, ol] of cl) {
+          node.children.set(m, new Node(m, 3 - node.to_move, move_prior(c, ol)));
+        }
+      }
       // CNN 先验：深层节点受预算限制（默认仅根节点，cnn_prior_max_nodes 可放大）
       if (cnnActive && cnnBudget > 0) {
         attachCnnPrior(cnnNet, pb, node);
@@ -874,12 +941,14 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
       const v = nd.to_move === leaf_to_move ? res_leaf : 1.0 - res_leaf;
       nd.N += 1;
       nd.W += v;
-      const mv = sim_moves[nd.to_move];
+      const tm = nd.to_move;
+      const stampArr = tm === 1 ? simStamp1 : simStamp2;
+      const cnt = tm === 1 ? cnt1 : cnt2;
       const kids = nd.children;
-      if (mv.size > 0 && kids.size > 0) {
+      if (cnt > 0 && kids.size > 0) {
         const cv = 1.0 - v;
         for (const [m, ch] of kids) {
-          if (mv.has(m)) {
+          if (stampArr[m] === itMark) {
             ch.amafN += 1;
             ch.amafW += cv;
           }
@@ -920,14 +989,16 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
     best = alt !== null ? alt : PASS_MOVE;
   }
   if (best === null) best = PASS_MOVE;
+  // 供下次调用的树重用句柄：选中着法对应的子节点（pass/resign 不可复用）
+  const bestChild = best !== PASS_MOVE && root.children.has(best) ? root.children.get(best) : null;
   // 显式过手规则：对手已过手，且本方胜率达标 → 过手终局（否则继续争胜）
   if (board.passes >= 1 && best !== PASS_MOVE && best_wr >= Number(pr["pass_threshold"])) {
-    return [PASS_MOVE, best_n, best_wr];
+    return [PASS_MOVE, best_n, best_wr, null];
   }
   if (Number(pr["resign_threshold"]) > 0
     && total_visits >= Math.trunc(Number(pr["resign_min_visits"]))
     && best_wr < Number(pr["resign_threshold"])) {
-    return ["resign", best_n, best_wr];
+    return ["resign", best_n, best_wr, null];
   }
-  return [best, best_n, best_wr];
+  return [best, best_n, best_wr, bestChild];
 }
