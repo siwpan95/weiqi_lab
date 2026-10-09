@@ -1,0 +1,56 @@
+{
+ "meta": {
+  "size": 9,
+  "corpus": "spec/games/corpus-2026-10-09.jsonl,spec/games/corpus-2026-10-09-cpp5k.jsonl",
+  "base_cnn": "ml/cnn-9.npz",
+  "balance": true,
+  "steps": 300,
+  "batch": 256,
+  "lr": 0.005,
+  "seed": 0,
+  "val_frac": 0.2,
+  "num_games": 92,
+  "train_samples": 1460,
+  "val_samples": 380,
+  "cut_game": 73,
+  "max_positions": 400000,
+  "final_train_mse": 0.0202,
+  "val_mse": 0.0874,
+  "val_acc": 0.7658,
+  "val_mean_blackwon": 0.655,
+  "val_mean_whitewon": 0.19,
+  "train_acc": 0.9541,
+  "train_mean_blackwon": 0.882,
+  "train_mean_whitewon": 0.098,
+  "elapsed_s": 277.9
+ },
+ "curve": [
+  {
+   "step": 100,
+   "train_mse": 0.0506,
+   "val_mse": 0.0751,
+   "val_acc": 0.8158,
+   "val_mean_blackwon": 0.701,
+   "val_mean_whitewon": 0.3,
+   "elapsed_s": 92.9
+  },
+  {
+   "step": 200,
+   "train_mse": 0.0314,
+   "val_mse": 0.0899,
+   "val_acc": 0.7368,
+   "val_mean_blackwon": 0.638,
+   "val_mean_whitewon": 0.192,
+   "elapsed_s": 185.2
+  },
+  {
+   "step": 300,
+   "train_mse": 0.0202,
+   "val_mse": 0.0874,
+   "val_acc": 0.7658,
+   "val_mean_blackwon": 0.655,
+   "val_mean_whitewon": 0.19,
+   "elapsed_s": 277.9
+  }
+ ]
+}

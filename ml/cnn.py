@@ -132,6 +132,13 @@ class PolicyCNN:
             dWv = None
             dbv = None
             dh2_value = 0.0
+        if dlogits is None:
+            # 冻结策略/卷积：仅回传价值头梯度（Track B 价值头训练用）
+            gv = {}
+            if dWv is not None:
+                gv["Wv"] = dWv
+                gv["bv"] = dbv
+            return gv
         # ---- 策略头梯度 ----
         W2r = p["W2"].reshape(ch2, ch1 * 9)
         h2t = h2.transpose(0, 2, 1)                        # (N,HW,ch2)

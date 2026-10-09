@@ -383,10 +383,16 @@ playout 步数（150 playouts 单次 genmove）：9 路 ~54–56 步、19 路 ~2
    再做数据增强（8 对称、旋转）+ 更大网络。⚠️ 基础网络（含已落地的价值头）走现有
    **纯 numpy + 自研 Adam** 的 CPU 训练路径（`ml/cnn.py`，零依赖即可训练）；
    仅"更大网络"（batch/精度/吞吐需求）才需 torch/GPU，届时另走破例放行。
-3. **价值头**：代码已落地（Track B，`ml/cnn.py` 的 `forwardV`/`backward`/`value_mse` +
-   `tools/cnn_forward.mjs::valueFrom`，JS 推理与 Python 严格对拍通过）——黑胜概率估计，
+3. **价值头**：代码已落地并**已训练**（Track B，`ml/cnn.py` 的 `forwardV`/`backward`/`value_mse` +
+   `tools/cnn_forward.mjs::valueFrom`，JS↔Python 对拍 |d|≤5.7e-7 通过）——黑胜概率估计，
    在 MCTS 叶子估值与面积法黑胜概率线性融合（`ai.mjs` 的 `cnn_value` 开关，默认 0）。
-   训练数据需先由 Track A 的死子修正终局计分（`referee.scoreAuto`）产出干净语料。
+   - 训练：`ml/train_value.py` 纯 numpy 自研 Adam，92 局语料（cnn-9 初始化 + `--balance --tail 20 --finetune-conv`）
+     → val_acc 76.58%、黑/白胜局均 val 0.655/0.190（分离清晰）；导出 `spec/cnn_weights-9-vh.json`。
+   - 实战谱验证（board-replay 跨引擎 9×9 15 局）：末局 100% 胜者预测准确（坐标朝向自检通过）；
+     中盘 62.86% vs 多数类基线 53.96%（残存白方类别先验，中盘决定性弱）。
+   - ⚠️ **B5 A/B 实测：中性**（9 路·80 pl·300 局，`cnn_value=0.5` vs 基线）：**A 152 : B 148，p=0.7440（不显著）**，
+     但 A 每手 255ms vs B 48ms（**5.3× 减速**）。印证"叶子即终局盘面 → 价值头与面积法冗余"：价值头不增强度、只增耗时。
+     → `cnn_value` 维持默认 **0**；真要撬动强度，价值头须落地到"非终局剪枝估值"（更大网络 + 更深 playout），而非仅在叶子复制面积法。
 4. **务实的中间方案**：把人类 19 路 CNN 的先验**只在 19 路**启用（该场景下它被证明有效），
    9 路继续用纯搜索——直到 9 路有合格 teacher。
 

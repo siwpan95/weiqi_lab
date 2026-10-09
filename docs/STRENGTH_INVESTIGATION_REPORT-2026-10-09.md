@@ -101,6 +101,11 @@
 
 ## 7. 待完项与下一步
 
-- **在跑 / 收尾**：`pbias19-05`（19 路 pbias 自对弈 100 局，冗余项，P2-4 已结案）；本批本地提交待推送（见 `docs/ROADMAP.md`）。
+- **在跑 / 收尾**：
+  - `pbias19-05`（19 路 pbias 自对弈 100 局，冗余项，P2-4 已结案）；
+  - **Track B 价值头已训练完成 + B5 A/B 已收尾**：`ml/train_value.py` 纯 numpy 训练（val_acc 76.58%、board-replay 末局 100%）；
+    **B5 A/B（`cnn_value=0.5` vs 基线，9 路·80 pl·300 局）结论：A 152 : B 148，p=0.7440（中性、不显著），A 每手 255ms vs B 48ms（5.3× 减速）**——
+    印证"叶子即终局盘面、价值头与面积法冗余"：不开 `cnn_value`（默认 0）。报告 `tournament/reports/ab-profile-2026-10-09-valuehead-w0.5.md`。
+  - 本批本地提交待推送（见 `docs/ROADMAP.md`）。
 - **长期 / 跨项目规划**：见 **`docs/ROADMAP.md`**（死子判定、价值头、跨语言并行、Markov 开局更大样本、CNN 扩规模、RAVE 移除等）。
 - **推送**：本批累计本地提交待建仓推送（铁律 3：需在场放行，推后 `git ls-remote` 核对 IN_SYNC）。

@@ -33,10 +33,14 @@
   - 实现：`tools/scoring.mjs`（纯函数死子检测 + 含死子面积法）、`tournament/referee.mjs::scoreAuto()`（终局计分自动移除死子）、`JsWeiqi/ai.mjs` 叶子估值 `dead_stones` 开关（默认 0，行为逐位不变）。
   - A/B（`ab-profile-2026-10-09-deadstone-300`，9 路 · 150 pl · 300 局）：**A(无死子) 143 : B(死子) 157，p=0.2530 → 中性**（点估计 +2.3pp 但不显著，Bonferroni 下更弱）。
   - 结论：死子判定作**叶子估值增强**不带来显著强度提升；但其**终局计分**语义（`scoreAuto`）仍修正"盘上皆活"，作为自对弈语料的干净终局标签保留。引擎 `dead_stones` 维持默认 0。
-- **Track B — 价值头（代码已落地；训练留待下批）**
+- **Track B — 价值头（代码 + 训练已落地；B5 A/B 进行中）**
   - 实现：`ml/cnn.py` 加 `Wv/bv` 参数 + `forwardV` / `backward(...,dvalue)` / `value_mse` + `load` 旧权重回退；`ml/export_weights.py` 导出 `has_value` 旗标与 `Wv/bv`；`tools/cnn_forward.mjs::valueFrom`（全局均值池化→线性→sigmoid，与 Python 严格对拍通过）；`JsWeiqi/ai.mjs` 叶子估值 `cnn_value` 融合开关（默认 0，行为逐位不变）。
   - 数值自检：合成价值头网络 JS↔Python 对拍 `value` |d|=2.7e-8、`forwardOne` 重构后最大 |d|=2.4e-7；`tests.mjs` 加 3 个价值头单测（含 `hasValue=false→0.5`、退化 `sigmoid` 确定性）。
-  - 待下批：用 `scoreAuto` 干净语料训练价值头，再开 `cnn_value>0` 做 A/B（Track B5）。
+  - 训练（`ml/train_value.py`，纯 numpy + 自研 Adam，零依赖）：语料 `corpus-2026-10-09.jsonl`+`corpus-2026-10-09-cpp5k.jsonl`（92 局，平衡后）以 cnn-9 初始化 + `--balance --tail 20 --finetune-conv --steps 300 --batch 256 --lr 5e-3` → **val_acc 76.58%**、val_mse 0.0874、黑胜局均 val 0.655 / 白胜局均 0.190（分离清晰）、train_acc 95.41%。产物 `ml/cnn-9-value.npz`(+curve) 与导出 `spec/cnn_weights-9-vh.json`（11074 参数，has_value=True）。
+  - 实战谱验证（`ml/validate_value.py`，board-replay 跨引擎 9×9 实战谱 15 局）：末局（近终局，坐标朝向自检）**100% 胜者预测准确**（黑胜局均 val 0.869 / 白胜局均 0.018）；中盘（≥10 手，1516 局面）**62.86%** vs 多数类基线 53.96%（+8.9pp，但中盘均值 0.322/0.026 双 <0.5，残存"白方常胜"类别先验——中盘局面决定性弱，胜负由引擎实力主导而非盘面）。
+  - 关键教训：① 冻结策略卷积不携带"谁领先"信息 → 必须 `--finetune-conv` 放开卷积微调才能学到盘面优劣；② 仅平衡类别反更差（35%），因冻结卷积无读盘能力、标签噪声大；③ 价值头只在**叶子=终局盘面**处强（100%），部署点与训练点（tail 20）对齐。
+  - **B5 A/B（完成，中性结论）**：`ab_prior.mjs --size 9 --playouts 80 --games 300`，A=`{"cnn_value":0.5,"cnn_prior_weights":".../spec/cnn_weights-9-vh.json"}` vs B=`{}`（`--tag valuehead-w0.5`）。**A 152 : B 148，p=0.7440（两比例 z 检验，双尾，不显著）**；平均每手 A 255ms / B 48ms（**5.3× 减速**）。
+    → **实证结论：叶子部署价值头对强度无显著影响（中性），但代价 5.3× 墙钟减速** → 印证"本引擎 playout 叶子即终局盘面，`pb.area()` 在叶子已精确，价值头与面积法冗余"。`cnn_value` 维持默认 **0**（不开）。报告：`tournament/reports/ab-profile-2026-10-09-valuehead-w0.5.md`。
 
 ---
 
