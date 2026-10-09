@@ -102,6 +102,17 @@
 （max|Δlogit| 3.8e-6），**无损保留完整预测力且运行期零依赖**。工程上 ② 用于开局（`OPENINGS=cnn`），
 ① 用于 playout 偏置（`pbias_model`，见 `docs/ENGINE_STRENGTH.md` §3.1）。
 
+**引擎强度开关与推荐配置（仅 JsWeiqi 实现，默认全关 → 跨语言可比性不受影响）**：
+`profile` 支持 `probe_k`（惰性探测）/`pw_c`+`pw_min`（渐进加宽）/`tree_reuse`/`lgr`/`lib2`/`pbias`+`pbias_model`/`cnn_prior` 等，
+逐项实测与 A/B 见 `docs/ENGINE_STRENGTH.md`。其中**唯一经 300 局 A/B 证实显著**的是渐进加宽：
+
+```json
+{ "probe_k": 3, "pw_c": 0.5, "pw_min": 6 }   // 19 路提速约 70×，搜索质量 300 局 59.3%（p<0.0001）
+```
+
+其余开关（LGR / lib2 / pbias / cnn_prior / tree_reuse）经实测为**中性或负向**，与其移植状态一并见
+`docs/PORTING.md` §4.1 与 `docs/ENGINE_STRENGTH.md` §7 的战果总表。
+
 **依赖边界**：破例引入的 `numpy` **仅在 `ml/`**（隔离 venv）；引擎/`tools/`/`harness/`/`tournament/` 仍零依赖。
 人类棋谱**不随仓分发**（`.cache/`、`spec/games/human-*.jsonl` 已 gitignore），按 `docs/RESEARCH.md` §7 的命令 + SHA 可复现。
 
