@@ -62,8 +62,19 @@ printf '{"id":1,"cmd":"hello"}\n{"id":2,"cmd":"quit"}\n' | <driver 启动命令>
 
 ### 4.2 ⚠️ 已知缺陷（**全部 6 个实现共同继承**）：RAVE 在根层退化为恒等
 
-`sim_moves` 只在**树下降阶段**记录着法（Py `weiqi_ai.py:562-570`、JS `ai.mjs` 同结构），
-playout 里的随机着法从未记入 AMAF 集合。于是根节点每个子节点满足
+"着法是否出现在某次模拟中"的标记只在**树下降阶段**写入（`while (node.expanded && children) { pb.apply(...); 标记着法 }`），
+**playout 里的随机着法从未记入** AMAF 集合。逐行确认的同构位置：
+
+| 语言 | 标记写入点 | 更新点 |
+|---|---|---|
+| Py | `weiqi_ai.py:562-570`（`sim_moves[color].add(m)`） | `:596-603` |
+| JS `JsWeiqi/ai.mjs` | `genmove` 下降循环内的 `simStamp1/2[m] = itMark` | 链回填处 |
+| C++ `CppWeiqi/weiqi_ai.cpp` | `:831-845`（`mv1/mv2[m] = simgen` 在下降 `while` 内） | `:899-903` |
+| Rust `RustWeiqi/src/ai.rs` | 下降循环内 `mv1/mv2[m] = simgen` | `:1133-1136` |
+| Cs `CsWeiqi/Ai.cs` | 下降循环内标记 | `:1031-1035` |
+| Go `GoWeiqi/ai.go` | 下降循环内 `simMoves[color][m]` | `:1100-1105` |
+
+**六语言同构，缺陷一致**。于是根节点每个子节点满足
 `amafN ≡ N` 且 `amafW/amafN ≡ W/N` → `val = (1−β)q + βq ≡ q`，**β 被完全消掉、RAVE 零贡献**
 （实测：`N===amafN` 且 `q===qa`，两个 seed 各 4/4 恒等；参数扫描中 `rave_k` 对结果逐位无影响）。
 
