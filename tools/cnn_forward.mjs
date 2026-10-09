@@ -189,6 +189,9 @@ async function main() {
   console.log(`JS 探针导出 ${outp.length} 个局面 → ${out}`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// 仅当作为**主模块**直接运行时才执行 CLI；
+// 注意 process.argv[1] 在 `node -e` / `--input-type=module` 等场景下为 undefined，
+// 而本模块会被 tournament/openings.mjs 以 import 方式加载 —— 必须做存在性守卫。
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }
