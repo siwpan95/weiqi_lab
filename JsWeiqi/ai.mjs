@@ -7,6 +7,8 @@
 // - 固定模拟次数预算（默认 500），RNG 为 splitmix64 流；同 (seed,playouts,profile) 可复现。
 // - 性能：PBoard 用 stamp 数组（零 set 分配）+ 快路径（提子预检 / 气数下界 / 单子判定）。
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { splitmix64, MASK64 } from "./rules.mjs";
 
 export const PASS = -1;
@@ -310,7 +312,78 @@ export const DEFAULT_PROFILE = {
   mercy: 0.0,
   pass_threshold: 0.5,
   score_scale: 0.0, // 0 → 自动 = n2/2（分差归一化尺度）
+  // ---- CNN 先验（可选；默认 0 = 关闭，基线行为完全不变）----
+  cnn_prior: 0.0,           // PUCT 先验项权重；0 = 关闭
+  cnn_prior_max_nodes: 1,   // 每次 genmove 最多做几次 CNN 前向（1 = 仅根节点）
+  cnn_prior_weights: null,  // 权重文件路径覆盖；null = spec/cnn_weights-<size>.json
 };
+
+// ---------------------------------------------------------------- CNN 先验
+// 运行期零依赖：CnnPolicy 由 tools/cnn_forward.mjs（纯 JS 前向）提供；
+// 该文件缺失时**自动禁用先验**（引擎仍可独立运行），并只在启用后首次调用时告警一次。
+let CnnPolicy = null;
+try {
+  ({ CnnPolicy } = await import("../tools/cnn_forward.mjs"));
+} catch (e) {
+  CnnPolicy = null;
+}
+
+let _cnnNet = null;
+let _cnnNetKey = null;
+let _cnnFailReason = null;
+let _cnnWarned = false;
+
+function loadCnnNet(size, weightsPath) {
+  const key = size + "|" + (weightsPath || "");
+  if (_cnnNetKey === key) return _cnnNet;
+  _cnnNetKey = key;
+  _cnnNet = null;
+  _cnnFailReason = null;
+  if (!CnnPolicy) {
+    _cnnFailReason = "tools/cnn_forward.mjs 不可用（引擎独立运行时属正常）";
+    return null;
+  }
+  try {
+    const p = weightsPath || _defaultWeightsPath(size);
+    const net = CnnPolicy.load(p);
+    if (net.size !== size) throw new Error(`权重尺寸 ${net.size} ≠ 棋盘 ${size}`);
+    _cnnNet = net;
+  } catch (e) {
+    _cnnFailReason = e.message;
+  }
+  return _cnnNet;
+}
+
+function _defaultWeightsPath(size) {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.join(here, "..", "spec", `cnn_weights-${size}.json`);
+}
+
+/** 从完整规则 Board 的栈记录推导"最后一手"点索引（-1 = 无/pass）：
+ *  落子手的记录里 prev_cells 与 cells 相比，唯一"空→有子"的点即落点（提子只会是"有子→空"）。 */
+export function lastMoveOf(board) {
+  const st = board.stack;
+  if (!st || st.length === 0) return -1;
+  const rec = st[st.length - 1];
+  if (rec.type !== "move" || !rec.prev_cells) return -1;
+  const cells = board.cells;
+  const prev = rec.prev_cells;
+  for (let i = 0; i < cells.length; i++) {
+    if (prev[i] === 0 && cells[i] !== 0) return i;
+  }
+  return -1;
+}
+
+/** 把 CNN 策略写进 node 的子节点（归一化到该节点的候选集），返回写入的节点数 */
+function attachCnnPrior(net, pb, node) {
+  if (!node.children || node.children.size === 0) return 0;
+  const probs = net.policyFrom(pb.cells, node.to_move, pb.last);
+  let sum = 0;
+  for (const [m] of node.children) if (probs[m] > 0) sum += probs[m];
+  if (sum <= 0) return 0;
+  for (const [m, ch] of node.children) ch.cnnP = probs[m] > 0 ? probs[m] / sum : 0;
+  return node.children.size;
+}
 
 export class Node {
   constructor(move, to_move, prior = 0.5) {
@@ -323,6 +396,7 @@ export class Node {
     this.amafW = 0.0;
     this.expanded = false;
     this.prior = prior;
+    this.cnnP = 0.0; // CNN 先验（归一化到本节点候选集；未启用时恒为 0）
   }
 }
 
@@ -440,16 +514,29 @@ function playout(pb, rng, pr, max_moves) {
       }
     }
     if (cands.length === 0) {
-      for (let p = 0; p < pb.n2; p++) {
-        if (cells[p] !== 0) continue;
-        const [ok, cap, , olibs] = pb.probe(color, p);
-        if (!ok) continue;
-        if (cap === 0) {
-          if (olibs === 1) continue;
-          if (pb.is_eye(p, color) && !pb.adjacent_atari(p, 3 - color)) continue;
+      // 逐圈扩大（关键性能优化，19 路实测：全盘扫描会使 probe 次数 ×35）：
+      // 半径 1 已在上方尝试过 → 依次试 2 / 4 / 全盘；每圈仅对盘内点调用 probe。
+      const rings = last >= 0 ? [2, 4, 0] : [0]; // 0 = 全盘
+      for (const R of rings) {
+        for (let p = 0; p < pb.n2; p++) {
+          if (cells[p] !== 0) continue;
+          if (R > 0) {
+            const dx = Math.abs((p % pb.size) - (last % pb.size));
+            if (dx > R) continue;
+            const dy = Math.abs(Math.floor(p / pb.size) - Math.floor(last / pb.size));
+            if (dy > R) continue;
+            if (dx <= 1 && dy <= 1) continue; // 半径 1 已试过
+          }
+          const [ok, cap, , olibs] = pb.probe(color, p);
+          if (!ok) continue;
+          if (cap === 0) {
+            if (olibs === 1) continue;
+            if (pb.is_eye(p, color) && !pb.adjacent_atari(p, 3 - color)) continue;
+          }
+          cands.push(p);
+          if (cap > 0) urgent.push(p);
         }
-        cands.push(p);
-        if (cap > 0) urgent.push(p);
+        if (cands.length > 0) break;
       }
     }
     for (const m of pb.rescue_moves(color)) {
@@ -480,8 +567,9 @@ function playout(pb, rng, pr, max_moves) {
   return pb;
 }
 
-function select(node, c, rave_k, rave) {
+function select(node, c, rave_k, rave, cnnW = 0.0) {
   const logN = Math.log(node.N + 1);
+  const sqrtN = Math.sqrt(node.N);
   let best = null;
   let bestv = -1e18;
   for (const [m, ch] of node.children) {
@@ -492,7 +580,9 @@ function select(node, c, rave_k, rave) {
       const beta = n > 0 ? Math.sqrt(rave_k / (rave_k + 3.0 * n)) : 1.0;
       q = (1.0 - beta) * q + beta * qa;
     }
-    const val = q + c * Math.sqrt(logN / (n + 1));
+    let val = q + c * Math.sqrt(logN / (n + 1));
+    // CNN 先验（PUCT 形式）：随访问数自然衰减；cnnW=0 时该项恒为 0（基线不变）
+    if (cnnW > 0 && ch.cnnP > 0) val += cnnW * ch.cnnP * (sqrtN / (1 + n));
     if (val > bestv) {
       bestv = val;
       best = m;
@@ -551,6 +641,23 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
     return [PASS_MOVE, 0, 0.0]; // 无任何非填眼着法 → 过手（终局机制）
   }
 
+  // ---- CNN 先验（可选）：根节点一定尝试；深层节点受 cnn_prior_max_nodes 预算限制 ----
+  const cnnW = Number(pr["cnn_prior"]) || 0;
+  let cnnBudget = 0;
+  let cnnNet = null;
+  if (cnnW > 0) {
+    cnnNet = loadCnnNet(size, pr["cnn_prior_weights"] || null);
+    if (cnnNet) {
+      pb0.last = lastMoveOf(board); // 根局面的"最后一手"来自完整规则栈
+      cnnBudget = Math.max(1, Math.trunc(Number(pr["cnn_prior_max_nodes"]))) - 1; // 根用掉 1 次
+      attachCnnPrior(cnnNet, pb0, root);
+    } else if (!_cnnWarned) {
+      _cnnWarned = true;
+      console.warn(`[ai] cnn_prior=${cnnW} 但先验不可用 → 已按纯 UCT 运行：${_cnnFailReason}`);
+    }
+  }
+  const cnnActive = cnnNet !== null && cnnW > 0;
+
   const max_moves = 3 * n2;
   const iters = Math.max(1, Math.trunc(Number(playouts)));
   for (let it = 0; it < iters; it++) {
@@ -559,7 +666,8 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
     const chain = [root];
     const sim_moves = { 1: new Set(), 2: new Set() };
     while (node.expanded && node.children.size > 0) {
-      const m = select(node, Number(pr["c"]), Number(pr["rave_k"]), Boolean(pr["rave"]));
+      const m = select(node, Number(pr["c"]), Number(pr["rave_k"]), Boolean(pr["rave"]),
+        cnnActive ? cnnW : 0.0);
       const color = node.to_move;
       if (m === PASS_MOVE) pb.play_pass(color);
       else {
@@ -576,6 +684,11 @@ export function genmove(board, playouts = 500, seed = 0, profile = null) {
         node.children.set(m, new Node(m, 3 - node.to_move, move_prior(c, ol)));
       }
       node.expanded = true;
+      // CNN 先验：深层节点受预算限制（默认仅根节点，cnn_prior_max_nodes 可放大）
+      if (cnnActive && cnnBudget > 0) {
+        attachCnnPrior(cnnNet, pb, node);
+        cnnBudget -= 1;
+      }
     }
     const leaf_to_move = node.to_move;
     pb = playout(pb, rng, pr, max_moves);

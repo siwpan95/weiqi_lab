@@ -74,6 +74,14 @@
 | `mercy` | 0.0 | playout 提前终止：分差 > mercy×棋盘点数即停（0=关） |
 | `pass_threshold` | 0.5 | 对手已过手时，本方估值 ≥ 该值即过手终局 |
 | `score_scale` | 0.0 | 分差归一化尺度（0=自动取 棋盘点数/2） |
+| `cnn_prior` | 0.0 | **CNN 先验权重（可选）**：>0 时启用 PUCT 先验项 `+ w·P(a)·√N/(1+n)`；0=关闭（基线行为不变） |
+| `cnn_prior_max_nodes` | 1 | 每次 genmove 最多做几次 CNN 前向（1=仅根节点；越大越准也越慢） |
+| `cnn_prior_weights` | null | 权重文件路径覆盖；null = `spec/cnn_weights-<size>.json` |
+
+> **CNN 先验（可选能力，当前由 JsWeiqi 实现）**：运行期零依赖——纯 JS 前向
+> （`tools/cnn_forward.mjs`，权重 JSON 0.22MB，与 Python 前向逐位等价 max|Δlogit|=3.8e-6）。
+> 权重文件缺失时自动禁用并回退纯 UCT（不报错）。教师模型与训练口径见 `docs/TIER3_LEARNING.md`；
+> **先验质量的上限 = 教师质量的上限**（实验见 `docs/ENGINE_STRENGTH.md` §5）。
 
 **AI 结构约定（五语言等价，见 PORTING.md §4）**：
 - 选择：UCT + RAVE（`β = sqrt(rave_k/(rave_k+3N))` 混合 AMAF 与实测值）；

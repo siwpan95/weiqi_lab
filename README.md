@@ -29,7 +29,8 @@
 | `docs/PROTOCOL_SPEC.md` | JSON-stdio 协议规范（语义对齐 GTP v2） |
 | `docs/PORTING.md` | 移植简报（交付物、验收门、性能要点） |
 | `docs/RESEARCH.md` | 联网调研纪要（来源 + 许可证 + 借用范围） |
-| `docs/TIER3_LEARNING.md` | 学习型组件（Markov / CNN）路线与决策请求 |
+| `docs/TIER3_LEARNING.md` | 学习型组件（Markov / CNN）路线与实测对比 |
+| `docs/ENGINE_STRENGTH.md` | **引擎强度提升路线（evidence-based）**：性能剖析、搜索改进、playout 策略、先验质量 |
 | `harness/` | 跨引擎一致性总入口：引擎清单 + JSON-stdio 客户端 + 三项校验 |
 | `tournament/` | 独立裁判层 + 循环赛 runner + 开局库 + 战报（`reports/`） |
 | `tools/` | 共享 I/O 层 + 学习组件：`sgf.mjs` `gtp.mjs` `regress.mjs` `markov.mjs` `train_markov.mjs` `import_human.mjs` `distill_to_table.mjs` `eval_model.mjs` `cnn_forward.mjs` + `gen_golden.py` |

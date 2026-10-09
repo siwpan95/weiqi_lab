@@ -303,6 +303,19 @@ export function run_unit_tests() {
   t.check("ai.priors_capture_higher", ai.move_prior(2, 3) > ai.move_prior(0, 3));
   t.check("ai.priors_self_atari_lower", ai.move_prior(0, 1) < ai.move_prior(0, 3));
 
+  // ---- CNN 先验（可选项）：默认关闭时行为必须逐位不变；开启后可复现且合法 ----
+  {
+    const b = new Board(9);
+    b.set_stones([[1, _p(9, "E5")], [2, _p(9, "E3")], [1, _p(9, "G5")], [2, _p(9, "C5")]], 1);
+    const [m0, n0] = ai.genmove(b, 60, 21, null);
+    const [m0b, n0b] = ai.genmove(b, 60, 21, { cnn_prior: 0 });
+    t.check("ai.cnn_prior_off_identical", m0 === m0b && n0 === n0b, [m0, m0b]);
+    const [mA, nA] = ai.genmove(b, 60, 21, { cnn_prior: 3 });
+    const [mB, nB] = ai.genmove(b, 60, 21, { cnn_prior: 3 });
+    t.check("ai.cnn_prior_deterministic", mA === mB && nA === nB, [mA, mB]);
+    t.check("ai.cnn_prior_legal", mA === -1 || b.legal_moves().includes(mA), mA);
+  }
+
   // 自对弈可终局且全着合法
   b = new Board(9);
   let plies = 0;

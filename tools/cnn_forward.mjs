@@ -129,6 +129,33 @@ export class CnnPolicy {
     return this.forwardOne(makePlanes(cells, this.size, toMove, last, this.line));
   }
 
+  /**
+   * 完整策略分布（供 MCTS 先验使用）：对**空点**做 softmax，占用点概率为 0。
+   * 返回 Float32Array(n2)；数值稳定（减最大值）。
+   */
+  policyFrom(cells, toMove, last, out = new Float32Array(this.size * this.size)) {
+    const logits = this.logitsFrom(cells, toMove, last);
+    const n = cells.length;
+    let mx = -Infinity;
+    for (let i = 0; i < n; i++) if (cells[i] === 0 && logits[i] > mx) mx = logits[i];
+    if (!Number.isFinite(mx)) {
+      out.fill(0);
+      return out;
+    }
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      if (cells[i] !== 0) {
+        out[i] = 0;
+        continue;
+      }
+      const e = Math.exp(logits[i] - mx);
+      out[i] = e;
+      sum += e;
+    }
+    if (sum > 0) for (let i = 0; i < n; i++) out[i] /= sum;
+    return out;
+  }
+
   /** 软掩码（占用点）后取 top-K：cells 为空点集合 */
   topK(cells, toMove, last, k = 3) {
     const logits = this.logitsFrom(cells, toMove, last);
