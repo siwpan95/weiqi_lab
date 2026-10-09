@@ -253,9 +253,18 @@ playout 步数（150 playouts 单次 genmove）：9 路 ~54–56 步、19 路 ~2
 所以下一步不是"更大的网"，而是**更强的教师**：
 1. **用快引擎生成高质量语料**：cpp/rs 以 10–20k playouts/手自对弈（≈3 min/局，夜间跑 100 局）
    → 同分布但显著更强的教师 → 重训 CNN → 先验才有意义。
-   🔄 **已开工**：`MARKOV_SIZE=9 MARKOV_GAMES=60 MARKOV_PLAYOUTS=5000 MARKOV_ENGINES=cpp,rs    MARKOV_TAG=-cpp5k node tools/train_markov.mjs`（60 局 × 5000 playouts/手，约 50–90 分钟）
-   → 产出 `spec/markov_model-cpp5k.json`（"搜索蒸馏"教师表），随后以 `pbias`（§3.1）在 9 路 A/B：
-   **弱教师表已知 ≈ 无信号；本实验回答"强教师表是否能把 9 路强度推上去"**。
+   ✅ **已完成**（41.9 分钟）：`MARKOV_SIZE=9 MARKOV_GAMES=60 MARKOV_PLAYOUTS=5000 MARKOV_ENGINES=cpp,rs MARKOV_TAG=-cpp5k node tools/train_markov.mjs` → `spec/markov_model-cpp5k.json`。
+
+   | 9 路教师表 | 语料 | top-1 | 相对均匀 | 稳态热点 |
+   |---|---|---|---|---|
+   | 弱教师 `markov_model.json` | cpp,go @ **200** pl | 8.9% | 1.95× | pass B1 B9 C1 B2 **A1**（一线） |
+   | **强教师 `markov_model-cpp5k.json`** | cpp,rs @ **5000** pl | **21.9%** | **4.6×** | pass B9 A9 A8 B8 J1（二线） |
+
+   用 25× 的搜索把 9 路教师的 top-1 从 8.9% 提到 **21.9%**、相对均匀从 1.95× 提到 **4.6×**（热点由一线移到二线）。
+   ⚠️ 但教师仍是**同一批弱引擎**（含 RAVE no-op 缺陷、无强度开关），只是搜索更深——属"**更深的同一台引擎**"。
+
+   🔄 随后以 `pbias`（§3.1）在 9 路做 **400 局 A/B**（`--tag pbias9-cpp5k400`，原生 9 路表）：
+   本实验回答"**表的质量提到 4.6× 均匀后，9 路强度能否被推上去**"——这是 pbias 路线唯一还站得住的希望。
 2. **人类棋谱用足**：PGD 全量 98k 局（当前只用 6000 局）；19 路 CNN 已 25.84%，
    再做数据增强（8 对称、旋转）+ 更大网络（需 torch/GPU，破例依赖需放行）。
 3. **价值头**：当前 CNN 只有策略头；MCTS 更需要价值估计（替代/融合 playout 终局估值）——
