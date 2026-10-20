@@ -186,8 +186,9 @@ OPENINGS=markov GAMES_PER_PAIR=2 node tournament/run_tournament.mjs
    死子自动判定/收单官（采用与 Tromp-Taylor / Gomill internal 一致的"盘上皆活"约定）。
 4. **`genmove` 不要求跨语言一致**（RNG 允许差异）；同语言同 (局面, playouts, seed, profile) 可复现。
    本基线恰实现了六语言逐位一致，但**不构成契约**（见 `docs/PORTING.md` §4）。
-5. **本机 Go 工具链**：系统 `G:\go` 的标准库源残缺；现役工具链为受管安装
-   `C:\Users\psw\.workbuddy\binaries\go\versions\1.27.1\go\bin\go.exe`，`GoWeiqi/build.sh` 已显式设 `GOROOT`。
+5. **Go 工具链**：使用当前 PATH 上可执行的 Go 工具链即可（本项目基线为 go1.27.1）；
+   `GoWeiqi/build.sh` 已显式设置 `GOROOT`，故不绑定特定安装位置 —— 换机 / 换盘只需保证 `go` 可达，
+   且 `GOROOT` 指向一套标准库源完整的工具链。
 
 ## 7. 与 `G:\repos\lab` 的对应关系
 
